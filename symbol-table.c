@@ -3,7 +3,7 @@
 #include<string.h>
 #include<ctype.h>
 #include<math.h>
-#include"header.h"
+#include"symbol-table.h"
 
 #define TABLE_SIZE	256
 

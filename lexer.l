@@ -1,7 +1,7 @@
 %option noyywrap 
 %{
 #include <stdio.h>
-#include "header.h" 
+#include "symbol-table.h"
 int linenumber;
 symtab * lookup();
 symtab * ptr;

@@ -1,5 +1,5 @@
 targets = scanner
-scanner_objects = lexer.o symboltable.o
+scanner_objects = lexer.o symbol-table.o
 
 .PHONY: all clean
 
