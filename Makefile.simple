@@ -1,0 +1,10 @@
+targets = scanner
+scanner_objects = lexer.o symboltable.o
+
+.PHONY: all clean
+
+all: $(targets)
+scanner: $(scanner_objects)
+	$(CC) $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) $(scanner_objects) $(LDLIBS) -o scanner
+clean:
+	rm -f $(targets) $(scanner_objects)
