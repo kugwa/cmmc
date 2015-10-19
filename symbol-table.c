@@ -71,7 +71,7 @@ void printSym(symtab* ptr)
 	    printf(" References = %d \n", ptr->counter);
 }
 
-void printSymTab()
+void printSymTab(void)
 {
     int i;
     printf("----- Symbol Table ---------\n");

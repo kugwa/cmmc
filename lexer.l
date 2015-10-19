@@ -1,90 +1,150 @@
-%option noyywrap 
+%option noyywrap
 %{
 #include <stdio.h>
 #include "symbol-table.h"
-int linenumber;
-symtab * lookup();
-symtab * ptr;
-void     insertID();
-void 	 printSymTab();
-/* You need to define for all tokens in C--, here are some examples */
-#define INT		10
-#define FLOAT 		11 
-#define OP_ASSIGN 	12 
-#define OP_OR 		13 
-#define MK_LPAREN 	14 
-#define MK_RPAREN 	15 
-#define ERROR 		100 
 
+int linenumber;
+
+/* You need to define for all tokens in C--, here are some examples */
+typedef enum CcmmcToken_enum {
+    CCMMC_TOKEN_ID = 1,
+    CCMMC_TOKEN_CONST_INT,
+    CCMMC_TOKEN_CONST_FLOAT,
+    CCMMC_TOKEN_CONST_STRING,
+    CCMMC_TOKEN_COMMENT,
+    CCMMC_TOKEN_OP_ASSIGN,
+    CCMMC_TOKEN_OP_OR,
+    CCMMC_TOKEN_OP_AND,
+    CCMMC_TOKEN_OP_NOT,
+    CCMMC_TOKEN_OP_ADD,
+    CCMMC_TOKEN_OP_SUB,
+    CCMMC_TOKEN_OP_MUL,
+    CCMMC_TOKEN_OP_DIV,
+    CCMMC_TOKEN_OP_GT,
+    CCMMC_TOKEN_OP_LT,
+    CCMMC_TOKEN_OP_GE,
+    CCMMC_TOKEN_OP_LE,
+    CCMMC_TOKEN_OP_NE,
+    CCMMC_TOKEN_OP_EQ,
+    CCMMC_TOKEN_DL_LPAREN,
+    CCMMC_TOKEN_DL_RPAREN,
+    CCMMC_TOKEN_DL_LBRACK,
+    CCMMC_TOKEN_DL_RBRACK,
+    CCMMC_TOKEN_DL_LBRACE,
+    CCMMC_TOKEN_DL_RBRACE,
+    CCMMC_TOKEN_DL_COMMA,
+    CCMMC_TOKEN_DL_SEMICOL,
+    CCMMC_TOKEN_DL_DOT,
+    CCMMC_TOKEN_NEWLINE,
+    CCMMC_TOKEN_ERROR = 100
+} CcmmcToken;
 %}
 
-letter   [A-Za-z]
-digit    [0-9]
-ID	 {letter}({letter}|{digit}|"_")*
-WS	 [ \t]+
-Int_constant {digit}+
+letter          [A-Za-z]
+digit           [0-9]
+ID              {letter}({letter}|{digit}|"_")*
+WS              [ \t]+
 
-/* You need to define the following RE's 
-Float_constant
-String_constant
-comment
-*/
+/* You need to define the following RE's */
+CONST_INT       {digit}+
+CONST_FLOAT     {digit}+\.{digit}+
+/* -?([0-9]+|[0-9]*\.[0-9]+([eE][-+]?[0-9]+)?) */
+CONST_STRING    \"([^\"\n]|(\\.))*\"
+COMMENT         \/\*([^*]|\n|(\*+([^*/]|\n)))*\*+\/
 
-OP_assign        "="
-OP_or   "||"
+/* operators */
+OP_ASSIGN       "="
+OP_OR           "||"
+OP_AND          "&&"
+OP_NOT          "!"
+OP_ADD          "+"
+OP_SUB          "-"
+OP_MUL          "*"
+OP_DIV          "/"
+OP_GT           ">"
+OP_LT           "<"
+OP_GE           ">="
+OP_LE           "<="
+OP_NE           "!="
+OP_EQ           "=="
 
-/* Other operators appear here */ 
+NEWLINE         "\n"
 
+/* separators */
+DL_LPAREN       "("
+DL_RPAREN       ")"
+DL_LBRACK       "["
+DL_RBRACK       "]"
+DL_LBRACE       "{"
+DL_RBRACE       "}"
+DL_COMMA        ","
+DL_SEMICOL      ";"
+DL_DOT          "."
 
-newline  "\n"
-
-DL_lparen "("
-DL_rparen ")"
-DL_lbrace "{"
-DL_rbrace "}"
-DL_comma  ","
-DL_semicol ";"
-DL_dot  "."
-
-/* Other separators appear here */
-
-error    .
+ERROR           .
 
 %%
 
 {WS}            {}
-{RWInt}         {/* return INT; */ }
-{RWFloat}       {/* return FLOAT; */}
-{ID}            { 
-			ptr = lookup(yytext);
-			if (ptr == NULL)
-			     insertID(yytext);	
-			else 
-			     ptr->counter++;
-		}
+{ID}            {
+                    symtab * ptr;
+                    ptr = lookup(yytext);
+                    if (ptr == NULL)
+                        insertID(yytext);
+                    else
+                        ptr->counter++;
+                }
+{CONST_INT}     {}
+{CONST_FLOAT}   {}
+{CONST_STRING}  {}
 
-{OP_assign}     /* return OP_ASSIGN; */ 
-{OP_or}         /* return OP_OR; */
-{DL_lparen}     /* return MK_LPAREN; */
-{DL_rparen}     /* return MK_RPAREN; */
-{DL_lbrace}     /* return MK_LBRACE; */
-{DL_rbrace}     /* return MK_RBRACE; */
-{DL_comma}      {}
-{DL_semicol}    {}
-{newline}       linenumber += 1;
-{error}         printf("ERR \n");/* return ERROR; */
+{COMMENT}       {
+                    puts(yytext);
+                }
+{OP_ASSIGN}     {}
+{OP_OR}         {}
+{OP_AND}        {}
+{OP_NOT}        {}
+{OP_ADD}        {}
+{OP_SUB}        {}
+{OP_MUL}        {}
+{OP_DIV}        {}
+{OP_GT}         {}
+{OP_LT}         {}
+{OP_GE}         {}
+{OP_LE}         {}
+{OP_NE}         {}
+{OP_EQ}         {}
+
+{NEWLINE}       {
+                    linenumber++;
+                }
+
+{DL_LPAREN}     {}
+{DL_RPAREN}     {}
+{DL_LBRACK}     {}
+{DL_RBRACK}     {}
+{DL_LBRACE}     {}
+{DL_RBRACE}     {}
+{DL_COMMA}      {}
+{DL_SEMICOL}    {}
+{DL_DOT}        {}
+
+{ERROR}         {
+                    fputs("ERR", stderr);/* return ERROR; */
+                }
 
 
 %%
 
-main(int argc, char **argv)
+int main(int argc, char **argv)
 {
- argc--; ++argv;
-   if (argc > 0)
-      yyin = fopen(argv[0], "r");
-   else
-      yyin = stdin;
-   yylex();
-   printSymTab();
+    if (argc > 1)
+        yyin = fopen(argv[1], "r");
+    else
+        yyin = stdin;
+    yylex();
+    printSymTab();
+    return 0;
 }
 
