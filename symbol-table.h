@@ -1,4 +1,4 @@
-struct symtab{
+struct symtab {
 	char lexeme[256];
 	struct symtab *front;
 	struct symtab *back;
@@ -7,6 +7,6 @@ struct symtab{
 };
 
 typedef struct symtab symtab;
-symtab * lookup(char *name);
+symtab* lookup(char *name);
 void insertID(char *name);
 void printSymTab(void);
