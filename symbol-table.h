@@ -8,7 +8,7 @@ struct symtab {
 
 typedef struct symtab symtab;
 symtab* lookup(char *name);
-void insertID(char *name);
+void insertID(char *name, int line_number);
 void printSymTab(void);
 symtab **fillTab(int *len);
 

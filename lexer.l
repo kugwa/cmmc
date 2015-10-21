@@ -5,7 +5,7 @@
 
 #define SIZE_OF_ARR(x) (sizeof(x)/sizeof(x[0]))
 
-int linenumber;
+static int line_number;
 
 /* You need to define for all tokens in C--, here are some examples */
 typedef enum CcmmcToken_enum {
@@ -99,7 +99,7 @@ ERROR           .
                         symtab * ptr;
                         ptr = lookup(yytext);
                         if (ptr == NULL)
-                            insertID(yytext);
+                            insertID(yytext, line_number);
                         else
                             ptr->counter++;
                     }
@@ -124,7 +124,7 @@ ERROR           .
 {OP_NE}         {}
 {OP_EQ}         {}
 
-{NEWLINE}       linenumber++;
+{NEWLINE}       line_number++;
 
 {DL_LPAREN}     {}
 {DL_RPAREN}     {}
@@ -138,7 +138,7 @@ ERROR           .
 
 {ERROR}         {
                     fprintf(stderr, "%d: error: undefined character `%s'\n",
-                        linenumber, yytext);
+                        line_number, yytext);
                 }
 
 

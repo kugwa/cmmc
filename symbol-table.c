@@ -8,7 +8,6 @@
 #define TABLE_SIZE    256
 
 symtab *hash_table[TABLE_SIZE];
-extern int linenumber;
 
 int HASH(char *str) {
     int idx = 0;
@@ -38,7 +37,7 @@ symtab *lookup(char *name) {
 }
 
 
-void insertID(char *name) {
+void insertID(char *name, int line_number) {
     int hash_key;
     symtab *ptr;
     symtab *symptr = malloc(sizeof(symtab));
@@ -59,7 +58,7 @@ void insertID(char *name) {
     }
 
     strcpy(symptr->lexeme, name);
-    symptr->line = linenumber;
+    symptr->line = line_number;
     symptr->counter = 1;
 }
 
