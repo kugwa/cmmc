@@ -83,8 +83,20 @@ void printSymTab(void) {
     }
 }
 
-int fillTab(symtab **tp) {
+symtab **fillTab(int *len) {
     int cnt = 0;
+    for (int i = 0; i < TABLE_SIZE; i++)
+    {
+        symtab *symptr = hash_table[i];
+        while (symptr != NULL)
+        {
+             cnt++;
+             symptr = symptr->front;
+        }
+    }
+
+    symtab **tp = malloc(sizeof(symtab*)*cnt);
+    cnt = 0;
     for (int i = 0; i < TABLE_SIZE; i++)
     {
         symtab *symptr = hash_table[i];
@@ -94,7 +106,8 @@ int fillTab(symtab **tp) {
              symptr = symptr->front;
         }
     }
-    return cnt;
+    *len = cnt;
+    return tp;
 }
 
 // vim: set sw=4 ts=4 sts=4 et:
