@@ -1,7 +1,10 @@
 %option noyywrap
 %{
 #include <stdio.h>
+#include <string.h>
 #include "symbol-table.h"
+
+#define SIZE_OF_ARR(x) (sizeof(x)/sizeof(x[0]))
 
 int linenumber;
 
@@ -87,20 +90,25 @@ ERROR           .
 
 {WS}            {}
 {ID}            {
-                    symtab * ptr;
-                    ptr = lookup(yytext);
-                    if (ptr == NULL)
-                        insertID(yytext);
-                    else
-                        ptr->counter++;
+                    int i;
+                    char *reserved[] = {"return", "typedef", "if", "else", "int", "float", "for", "void", "while"};
+
+                    for (i = 0; i < SIZE_OF_ARR(reserved); i++)
+                        if (strcmp(yytext, reserved[i]) == 0) break;
+                    if (i == SIZE_OF_ARR(reserved)) {
+                        symtab * ptr;
+                        ptr = lookup(yytext);
+                        if (ptr == NULL)
+                            insertID(yytext);
+                        else
+                            ptr->counter++;
+                    }
                 }
 {CONST_INT}     {}
 {CONST_FLOAT}   {}
 {CONST_STRING}  {}
 
-{COMMENT}       {
-                    puts(yytext);
-                }
+{COMMENT}       puts(yytext);
 {OP_ASSIGN}     {}
 {OP_OR}         {}
 {OP_AND}        {}
@@ -116,9 +124,7 @@ ERROR           .
 {OP_NE}         {}
 {OP_EQ}         {}
 
-{NEWLINE}       {
-                    linenumber++;
-                }
+{NEWLINE}       linenumber++;
 
 {DL_LPAREN}     {}
 {DL_RPAREN}     {}
@@ -130,9 +136,7 @@ ERROR           .
 {DL_SEMICOL}    {}
 {DL_DOT}        {}
 
-{ERROR}         {
-                    fputs("ERR", stderr);/* return ERROR; */
-                }
+{ERROR}         fputs("ERR", stderr);/* return ERROR; */
 
 
 %%
