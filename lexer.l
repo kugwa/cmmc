@@ -91,7 +91,8 @@ ERROR           .
 {WS}            {}
 {ID}            {
                     int i;
-                    char *reserved[] = {"return", "typedef", "if", "else", "int", "float", "for", "void", "while"};
+                    char *reserved[] = {"return", "typedef", "if", "else",
+                        "int", "float", "for", "void", "while"};
 
                     for (i = 0; i < SIZE_OF_ARR(reserved); i++)
                         if (strcmp(yytext, reserved[i]) == 0) break;
