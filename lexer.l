@@ -96,10 +96,10 @@ ERROR           .
                     for (i = 0; i < SIZE_OF_ARR(reserved); i++)
                         if (strcmp(yytext, reserved[i]) == 0) break;
                     if (i == SIZE_OF_ARR(reserved)) {
-                        symtab * ptr;
-                        ptr = lookup(yytext);
+                        CcmmcSymbol * ptr;
+                        ptr = ccmmc_symbol_table_lookup(yytext);
                         if (ptr == NULL)
-                            insertID(yytext, line_number);
+                            ccmmc_symbol_table_insert_id(yytext, line_number);
                         else
                             ptr->counter++;
                     }

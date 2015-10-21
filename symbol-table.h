@@ -1,19 +1,19 @@
 #ifndef CCMMC_HEADER_SYMBOL_TABLE_H
 #define CCMMC_HEADER_SYMBOL_TABLE_H
 
-struct symtab {
+typedef struct CcmmcSymbol_struct {
     char lexeme[256];
-    struct symtab *front;
-    struct symtab *back;
+    struct CcmmcSymbol_struct *front;
+    struct CcmmcSymbol_struct *back;
     int line;
     int counter;
-};
+} CcmmcSymbol;
 
-typedef struct symtab symtab;
-symtab* lookup(char *name);
-void insertID(char *name, int line_number);
-void printSymTab(void);
-symtab **fillTab(int *len);
+CcmmcSymbol     *ccmmc_symbol_table_lookup          (char *name);
+void             ccmmc_symbol_table_insert_id       (char *name,
+                                                     int line_number);
+void             ccmmc_symbol_table_print           (void);
+CcmmcSymbol    **ccmmc_symbol_table_tmp             (int *len);
 
 #endif
 // vim: set sw=4 ts=4 sts=4 et:

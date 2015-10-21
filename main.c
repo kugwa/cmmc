@@ -4,8 +4,8 @@
 #include "symbol-table.h"
 
 static int id_compare(const void *a, const void *b) {
-    const symtab *aa = *(const symtab**)a;
-    const symtab *bb = *(const symtab**)b;
+    const CcmmcSymbol *aa = *(const CcmmcSymbol**)a;
+    const CcmmcSymbol *bb = *(const CcmmcSymbol**)b;
     return strcmp(aa->lexeme, bb->lexeme);
 }
 
@@ -17,12 +17,12 @@ int main(int argc, char **argv) {
     yylex();
 
     int len;
-    symtab **id_list = fillTab(&len);
-    qsort(id_list, len, sizeof(symtab*), id_compare);
+    CcmmcSymbol **id_list = ccmmc_symbol_table_tmp(&len);
+    qsort(id_list, len, sizeof(CcmmcSymbol*), id_compare);
 
     puts("Frequency of identifiers:");
     for (int i = 0; i < len; i++) {
-        printf("%-16s%d\n", id_list[i]->lexeme, id_list[i]->counter);
+        printf("%-15s %d\n", id_list[i]->lexeme, id_list[i]->counter);
     }
 
     return 0;

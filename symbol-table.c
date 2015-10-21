@@ -7,9 +7,9 @@
 
 #define TABLE_SIZE    256
 
-symtab *hash_table[TABLE_SIZE];
+static CcmmcSymbol *hash_table[TABLE_SIZE];
 
-int HASH(char *str) {
+static int hash(char *str) {
     int idx = 0;
     while (*str) {
         idx = idx << 1;
@@ -20,12 +20,12 @@ int HASH(char *str) {
 }
 
 /* returns the symbol table entry if found else NULL */
-symtab *lookup(char *name) {
+CcmmcSymbol *ccmmc_symbol_table_lookup(char *name) {
     int hash_key;
-    symtab *symptr;
+    CcmmcSymbol *symptr;
     if (!name)
         return NULL;
-    hash_key = HASH(name);
+    hash_key = hash(name);
     symptr = hash_table[hash_key];
 
     while (symptr) {
@@ -37,12 +37,12 @@ symtab *lookup(char *name) {
 }
 
 
-void insertID(char *name, int line_number) {
+void ccmmc_symbol_table_insert_id(char *name, int line_number) {
     int hash_key;
-    symtab *ptr;
-    symtab *symptr = malloc(sizeof(symtab));
+    CcmmcSymbol *ptr;
+    CcmmcSymbol *symptr = malloc(sizeof(CcmmcSymbol));
 
-    hash_key = HASH(name);
+    hash_key = hash(name);
     ptr = hash_table[hash_key];
 
     if (ptr == NULL) {
@@ -62,31 +62,31 @@ void insertID(char *name, int line_number) {
     symptr->counter = 1;
 }
 
-void printSym(symtab *ptr) {
+static void print_symbol(CcmmcSymbol *ptr) {
     printf(" Name = %s \n", ptr->lexeme);
     printf(" References = %d \n", ptr->counter);
 }
 
-void printSymTab(void) {
+void ccmmc_symbol_table_print(void) {
     puts("----- Symbol Table ---------");
     for (int i = 0; i < TABLE_SIZE; i++)
     {
-        symtab *symptr;
+        CcmmcSymbol *symptr;
         symptr = hash_table[i];
         while (symptr != NULL)
         {
              printf("====>  index = %d\n", i);
-             printSym(symptr);
+             print_symbol(symptr);
              symptr = symptr->front;
         }
     }
 }
 
-symtab **fillTab(int *len) {
+CcmmcSymbol **ccmmc_symbol_table_tmp(int *len) {
     int cnt = 0;
     for (int i = 0; i < TABLE_SIZE; i++)
     {
-        symtab *symptr = hash_table[i];
+        CcmmcSymbol *symptr = hash_table[i];
         while (symptr != NULL)
         {
              cnt++;
@@ -94,11 +94,11 @@ symtab **fillTab(int *len) {
         }
     }
 
-    symtab **tp = malloc(sizeof(symtab*)*cnt);
+    CcmmcSymbol **tp = malloc(sizeof(CcmmcSymbol*)*cnt);
     cnt = 0;
     for (int i = 0; i < TABLE_SIZE; i++)
     {
-        symtab *symptr = hash_table[i];
+        CcmmcSymbol *symptr = hash_table[i];
         while (symptr != NULL)
         {
              tp[cnt++] = symptr;
