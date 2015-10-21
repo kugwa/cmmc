@@ -21,6 +21,7 @@ missing
 Makefile
 Makefile.in
 stamp-h1
+ylwrap
 .dirstamp
 .deps
 .libs
