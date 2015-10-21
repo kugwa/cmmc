@@ -1,10 +1,4 @@
-targets = scanner
-scanner_objects = lexer.o symbol-table.o
+.PHONY: auto
 
-.PHONY: all clean
-
-all: $(targets)
-scanner: $(scanner_objects)
-	$(CC) $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) $(scanner_objects) $(LDLIBS) -o scanner
-clean:
-	rm -f $(targets) $(scanner_objects)
+auto:
+	./configure && $(MAKE)

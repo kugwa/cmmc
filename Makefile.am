@@ -2,7 +2,7 @@
 
 NULL =
 
-EXTRA_DIST = autogen.sh
+EXTRA_DIST = autogen.sh Makefile.simple
 
 bin_PROGRAMS = scanner
 noinst_LIBRARIES = liblexer.a
@@ -24,3 +24,13 @@ liblexer_a_SOURCES =	\
 	$(NULL)
 
 BUILT_SOURCES = lexer.h
+
+submit_dir_name = hw
+submit_tarball_prefix = b01902054_b01902062
+submit: dist
+	tar -zxf $(DIST_ARCHIVES)
+	mv $(distdir) $(submit_dir_name)
+	cp -a $(submit_dir_name)/Makefile.simple $(submit_dir_name)/Makefile
+	ver=`git rev-list HEAD | wc -l` && tar -jpcf \
+	    $(submit_tarball_prefix)_ver$$ver.tar.bz2 $(submit_dir_name)
+	rm -rf $(submit_dir_name)
