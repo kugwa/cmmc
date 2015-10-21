@@ -136,7 +136,7 @@ ERROR           .
 {DL_SEMICOL}    {}
 {DL_DOT}        {}
 
-{ERROR}         fputs("ERR", stderr);/* return ERROR; */
+{ERROR}         fprintf(stderr, "%d: error\n", linenumber);
 
 
 %%
