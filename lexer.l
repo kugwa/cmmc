@@ -136,7 +136,10 @@ ERROR           .
 {DL_SEMICOL}    {}
 {DL_DOT}        {}
 
-{ERROR}         fprintf(stderr, "%d: error\n", linenumber);
+{ERROR}         {
+                    fprintf(stderr, "%d: error: undefined character `%s'\n",
+                        linenumber, yytext);
+                }
 
 
 %%
