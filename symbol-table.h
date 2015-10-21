@@ -1,9 +1,9 @@
 struct symtab {
-	char lexeme[256];
-	struct symtab *front;
-	struct symtab *back;
-	int line;
-	int counter;
+    char lexeme[256];
+    struct symtab *front;
+    struct symtab *back;
+    int line;
+    int counter;
 };
 
 typedef struct symtab symtab;
