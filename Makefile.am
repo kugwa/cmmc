@@ -22,6 +22,7 @@ liblexer_a_LFLAGS = --header-file=lexer.h
 liblexer_a_SOURCES =	\
 	lexer.l		\
 	$(NULL)
+lexer.h: liblexer_a-lexer.c
 
 BUILT_SOURCES = lexer.h
 
@@ -31,6 +32,8 @@ submit: dist
 	tar -zxf $(DIST_ARCHIVES)
 	mv $(distdir) $(submit_dir_name)
 	cp -a $(submit_dir_name)/Makefile.simple $(submit_dir_name)/Makefile
+	rm $(submit_dir_name)/liblexer_a-lexer.c
+	rm $(submit_dir_name)/lexer.h
 	ver=`git rev-list HEAD | wc -l` && tar -jpcf \
 	    $(submit_tarball_prefix)_ver$$ver.tar.bz2 $(submit_dir_name)
 	rm -rf $(submit_dir_name)
