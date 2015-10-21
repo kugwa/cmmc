@@ -83,4 +83,18 @@ void printSymTab(void) {
     }
 }
 
+int fillTab(symtab **tp) {
+    int cnt = 0;
+    for (int i = 0; i < TABLE_SIZE; i++)
+    {
+        symtab *symptr = hash_table[i];
+        while (symptr != NULL)
+        {
+             tp[cnt++] = symptr;
+             symptr = symptr->front;
+        }
+    }
+    return cnt;
+}
+
 // vim: set sw=4 ts=4 sts=4 et:
