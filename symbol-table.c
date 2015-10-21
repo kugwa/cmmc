@@ -51,7 +51,7 @@ void insertID(char *name) {
         hash_table[hash_key] = symptr;
         symptr->front = NULL;
         symptr->back = symptr;
-	} else {
+    } else {
         symptr->front = ptr;
         ptr->back = symptr;
         symptr->back = symptr;
@@ -73,13 +73,13 @@ void printSymTab(void) {
     for (int i = 0; i < TABLE_SIZE; i++)
     {
         symtab *symptr;
-		symptr = hash_table[i];
-		while (symptr != NULL)
-		{
-			printf("====>  index = %d\n", i);
-			printSym(symptr);
-			symptr = symptr->front;
-		}
+        symptr = hash_table[i];
+        while (symptr != NULL)
+        {
+             printf("====>  index = %d\n", i);
+             printSym(symptr);
+             symptr = symptr->front;
+        }
     }
 }
 
