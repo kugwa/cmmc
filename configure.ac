@@ -3,6 +3,7 @@
 # vim: set sw=4 ts=4 sts=4 et:
 
 AC_INIT([ccmmc], [0.1])
+AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_SRCDIR([lexer.l])
 AC_CONFIG_HEADERS([config.h])
 
@@ -12,7 +13,17 @@ AM_SILENT_RULES([yes])
 # Checks for programs.
 AC_PROG_CC
 AC_PROG_CC_STDC
+AC_PROG_RANLIB
 AM_PROG_LEX
+
+# Checks for warning flags.
+AX_IS_RELEASE([git-directory])
+AX_COMPILER_FLAGS()
+case "$WARN_CFLAGS" in
+    *-Wdeclaration-after-statement*)
+        WARN_CFLAGS="$WARN_CFLAGS -Wno-declaration-after-statement"
+        ;;
+esac
 
 # Checks for libraries.
 
