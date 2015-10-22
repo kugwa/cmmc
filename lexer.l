@@ -50,7 +50,7 @@ WS              [ \t]+
 
 /* You need to define the following RE's */
 CONST_INT       [+-]?{digit}+
-CONST_FLOAT     [+-]?(([0-9]+|[0-9]*\.[0-9]+)([eE][-+]?[0-9]+)?)
+CONST_FLOAT     [+-]?(([0-9]+\.?|[0-9]*\.[0-9]+)([eE][-+]?[0-9]+)?)
                 /* {digit}+\.{digit}+ */
 CONST_STRING    \"([^\"\n]|(\\.))*\"
 COMMENT         \/\*([^*]|\n|(\*+([^*/]|\n)))*\*+\/
