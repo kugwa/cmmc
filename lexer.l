@@ -1,5 +1,6 @@
 %option noyywrap
 %{
+#include <stdlib.h>
 #include <string.h>
 #include "symbol-table.h"
 
@@ -139,6 +140,7 @@ ERROR           .
 {ERROR}         {
                     fprintf(stderr, "%d: error: undefined character `%s'\n",
                         line_number, yytext);
+                    exit(1);
                 }
 
 
