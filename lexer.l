@@ -5,7 +5,7 @@
 
 #define SIZE_OF_ARR(x) (sizeof(x)/sizeof(x[0]))
 
-static int line_number;
+static int line_number = 1;
 
 /* You need to define for all tokens in C--, here are some examples */
 typedef enum CcmmcToken_enum {
