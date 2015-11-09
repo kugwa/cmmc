@@ -109,7 +109,12 @@ ERROR           .
 {CONST_FLOAT}   {}
 {CONST_STRING}  {}
 
-{COMMENT}       puts(yytext);
+{COMMENT}       {
+                    int i;
+                    for (i = 0; yytext[i]; i++)
+                        if (yytext[i] == '\n')
+                            line_number++;
+                }
 {OP_ASSIGN}     {}
 {OP_OR}         {}
 {OP_AND}        {}
