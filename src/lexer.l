@@ -1,5 +1,6 @@
 %option noyywrap
 %{
+#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 #include "symbol-table.h"
@@ -111,6 +112,10 @@ ERROR           .
                         CCMMC_TOKEN_FOR,
                         CCMMC_TOKEN_VOID,
                         CCMMC_TOKEN_WHILE};
+                    static_assert(
+                        SIZE_OF_ARR(reserved) == SIZE_OF_ARR(reserved_token),
+                        "Reserved words array and reserved tokens array "
+                        "must have the same size");
 
                     for (i = 0; i < SIZE_OF_ARR(reserved); i++)
                         if (strcmp(yytext, reserved[i]) == 0)
