@@ -4,29 +4,33 @@ NULL =
 
 EXTRA_DIST = autogen.sh Makefile.simple
 
-bin_PROGRAMS = scanner
-noinst_LIBRARIES = liblexer.a
+bin_PROGRAMS = parser
+noinst_LIBRARIES = libparser.a
 
 AM_CPPFLAGS = -I$(top_srcdir)/src
 
-scanner_CFLAGS = $(WARN_CFLAGS)
-scanner_SOURCES =		\
-	lexer.h			\
+parser_CFLAGS = $(WARN_CFLAGS)
+parser_SOURCES =		\
 	src/main.c		\
+	src/ast.h		\
+	src/ast.c		\
 	src/symbol-table.h	\
 	src/symbol-table.c	\
 	$(NULL)
-scanner_LDADD =			\
-	liblexer.a		\
+parser_LDADD =			\
+	libparser.a		\
 	$(NULL)
 
-liblexer_a_LFLAGS = --header-file=lexer.h
-liblexer_a_SOURCES =		\
+libparser_a_YFLAGS = -d
+libparser_a_SOURCES =		\
 	src/lexer.l		\
+	src/parser.y		\
 	$(NULL)
-lexer.h: src/liblexer_a-lexer.c
 
-BUILT_SOURCES = lexer.h
+src/lexer.o:
+	@touch src/lexer.o
+
+BUILT_SOURCES = src/lexer.c
 
 submit_dir_name = hw
 submit_tarball_prefix = b01902054_b01902062
@@ -34,8 +38,9 @@ submit: dist
 	tar -zxf $(DIST_ARCHIVES)
 	mv $(distdir) $(submit_dir_name)
 	cp -a $(submit_dir_name)/Makefile.simple $(submit_dir_name)/Makefile
-	rm $(submit_dir_name)/src/liblexer_a-lexer.c
-	rm $(submit_dir_name)/lexer.h
+	rm $(submit_dir_name)/src/lexer.c
+	rm $(submit_dir_name)/src/libparser_a-parser.h
+	rm $(submit_dir_name)/src/libparser_a-parser.c
 	ver=`git rev-list HEAD | wc -l` && tar -jpcf \
 	    $(submit_tarball_prefix)_ver$$ver.tar.bz2 $(submit_dir_name)
 	rm -rf $(submit_dir_name)

@@ -1,30 +1,22 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "lexer.h"
-#include "symbol-table.h"
+#include "ast.h"
+#include "src/libparser_a-parser.h"
 
-static int id_compare(const void *a, const void *b) {
-    const CcmmcSymbol *aa = *(const CcmmcSymbol**)a;
-    const CcmmcSymbol *bb = *(const CcmmcSymbol**)b;
-    return strcmp(aa->lexeme, bb->lexeme);
-}
+extern FILE *yyin;
 
-int main(int argc, char **argv) {
-    if (argc > 1)
-        yyin = fopen(argv[1], "r");
-    else
-        yyin = stdin;
-    yylex();
-
-    int len;
-    CcmmcSymbol **id_list = ccmmc_symbol_table_tmp(&len);
-    qsort(id_list, len, sizeof(CcmmcSymbol*), id_compare);
-
-    puts("Frequency of identifiers:");
-    for (int i = 0; i < len; i++) {
-        printf("%-15s %d\n", id_list[i]->lexeme, id_list[i]->counter);
+int main (int argc, char **argv)
+{
+    if (argc != 2) {
+        fputs("usage: parser [source file]\n", stderr);
+        exit(1);
     }
-
+    yyin = fopen(argv[1],"r");
+    if (yyin == NULL) {
+        fputs("Error opening source file.\n", stderr);
+        exit(1);
+    }
+    yyparse();
     return 0;
 }
 

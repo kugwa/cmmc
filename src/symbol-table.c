@@ -82,31 +82,4 @@ void ccmmc_symbol_table_print(void) {
     }
 }
 
-CcmmcSymbol **ccmmc_symbol_table_tmp(int *len) {
-    int cnt = 0;
-    for (int i = 0; i < TABLE_SIZE; i++)
-    {
-        CcmmcSymbol *symptr = hash_table[i];
-        while (symptr != NULL)
-        {
-             cnt++;
-             symptr = symptr->front;
-        }
-    }
-
-    CcmmcSymbol **tp = malloc(sizeof(CcmmcSymbol*)*cnt);
-    cnt = 0;
-    for (int i = 0; i < TABLE_SIZE; i++)
-    {
-        CcmmcSymbol *symptr = hash_table[i];
-        while (symptr != NULL)
-        {
-             tp[cnt++] = symptr;
-             symptr = symptr->front;
-        }
-    }
-    *len = cnt;
-    return tp;
-}
-
 // vim: set sw=4 ts=4 sts=4 et:
