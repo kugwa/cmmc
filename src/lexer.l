@@ -77,6 +77,11 @@ ERROR           .
                         else
                             ptr->counter++;
                     }
+                    yylval.lexeme = strdup(yytext);
+                    if (yylval.lexeme == NULL) {
+                        fputs("strdup() failed\n", stderr);
+                        exit(1);
+                    }
                     return ID;
                 }
 {CONST_INT}     {
