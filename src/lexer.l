@@ -79,10 +79,30 @@ ERROR           .
                     }
                     return ID;
                 }
-{CONST_INT}     return CONST; //TODO
-{CONST_FLOAT}   return CONST;
-{CONST_STRING}  return CONST;
-
+{CONST_INT}     {
+                    CON_Type *p;
+                    p = (CON_Type *)malloc(sizeof(CON_Type));
+                    p->const_type = INTEGERC;
+                    p->const_u.intval = atoi(yytext);
+                    yylval.const1 = p;
+                    return CONST;
+                }
+{CONST_FLOAT}   {
+                    CON_Type *p;
+                    p = (CON_Type *)malloc(sizeof(CON_Type));
+                    p->const_type = FLOATC;
+                    p->const_u.fval = atof(yytext);
+                    yylval.const1 = p;
+                    return CONST;
+                }
+{CONST_STRING}  {
+                    CON_Type *p;
+                    p = (CON_Type *)malloc(sizeof(CON_Type));
+                    p->const_type = STRINGC;
+                    p->const_u.sc = strdup(yytext);
+                    yylval.const1 = p;
+                    return CONST;
+                }
 {COMMENT}       {
                     int i;
                     for (i = 0; yytext[i]; i++)
@@ -121,7 +141,6 @@ ERROR           .
                         line_number, yytext);
                     exit(1);
                 }
-
 
 %%
 
