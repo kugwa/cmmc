@@ -6,6 +6,8 @@
 extern FILE *yyin;
 extern AST_NODE *prog;
 
+void printGV(AST_NODE *root, char* fileName);
+
 int main (int argc, char **argv)
 {
     if (argc != 2) {
