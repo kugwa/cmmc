@@ -4,6 +4,7 @@
 #include "src/libparser_a-parser.h"
 
 extern FILE *yyin;
+extern AST_NODE *prog;
 
 int main (int argc, char **argv)
 {
@@ -17,6 +18,7 @@ int main (int argc, char **argv)
         exit(1);
     }
     yyparse();
+    printGV(prog, NULL);
     return 0;
 }
 
