@@ -157,7 +157,7 @@ param		: type ID
             | type ID dim_fn
                 {
                     $$ = makeDeclNode(FUNCTION_PARAMETER_DECL);
-                    makeFamily($$, 3, $1, makeIDNode($2, NORMAL_ID), $3);
+                    makeFamily($$, 2, $1, makeChild(makeIDNode($2, ARRAY_ID), $3));
                 }
             ;
 dim_fn		: DL_LBRACK expr_null DL_RBRACK
@@ -183,7 +183,7 @@ expr_null	:expr
 block           : decl_list stmt_list
                     {
                         $$ = Allocate(BLOCK_NODE);
-                        makeFamily($$, 2, $1, $2);
+                        makeFamily($$, 2, makeChild(Allocate(VARIABLE_DECL_LIST_NODE), $1), makeChild(Allocate(STMT_LIST_NODE), $2));
                     }
                 | stmt_list
                     {
@@ -202,11 +202,11 @@ block           : decl_list stmt_list
 
 decl_list	: decl_list decl
                 {
-                        /*TODO*/
+                        $$ = makeSibling($1, $2);
                 }
             | decl
                 {
-                        /*TODO*/
+                        $$ = $1;
                 }
             ;
 
@@ -252,10 +252,6 @@ type		: INT
                 {
                     $$ = makeIDNode("float", NORMAL_ID);
                 }
-            /*| ID
-                {
-                }
-            */
             ;
 
 id_list		: ID
@@ -342,8 +338,7 @@ init_id		: ID
                 }
             | ID OP_ASSIGN relop_expr
                 {
-                    /*TODO*/
-                    $$ = makeIDNode($1, NORMAL_ID);
+                    $$ = makeIDNode($1, WITH_INIT_ID);
                     makeChild($$, $3);
                 }
             ;
