@@ -66,7 +66,7 @@ int yyerror (char *mesg)
 %type <node> decl_list decl var_decl type init_id_list init_id stmt relop_expr
 %type <node> relop_term relop_factor expr term factor var_ref param_list param
 %type <node> dim_fn expr_null id_list dim_decl cexpr mcexpr cfactor
-%type <node> assign_expr_list test assign_expr rel_op relop_expr_list
+%type <node> assign_expr_list assign_expr rel_op relop_expr_list
 %type <node> nonempty_relop_expr_list add_op mul_op dim_list type_decl
 %type <node> nonempty_assign_expr_list
 
@@ -91,9 +91,19 @@ global_decl_list: global_decl_list global_decl
                     }
                 ;
 
-global_decl	: decl_list function_decl
+global_decl	: 
+              /* decl_list function_decl
                 {
                     $$ = makeSibling(makeChild(Allocate(VARIABLE_DECL_LIST_NODE), $1), $2);
+                }
+              */
+              type_decl
+                {
+                    $$ = $1;
+                }
+            | var_decl
+                {
+                    $$ = $1;
                 }
             | function_decl
                 {
@@ -110,7 +120,10 @@ function_decl	: type ID DL_LPAREN param_list DL_RPAREN DL_LBRACE block DL_RBRACE
                     }
                 | VOID ID DL_LPAREN param_list DL_RPAREN DL_LBRACE block DL_RBRACE
                     {
-                        /*TODO*/
+                        $$ = makeDeclNode(FUNCTION_DECL);
+                        AST_NODE* parameterList = Allocate(PARAM_LIST_NODE);
+                        makeChild(parameterList, $4);
+                        makeFamily($$, 4, makeIDNode("void", NORMAL_ID), makeIDNode($2, NORMAL_ID), parameterList, $7);
                     }
                 | type ID DL_LPAREN  DL_RPAREN DL_LBRACE block DL_RBRACE
                     {
@@ -120,7 +133,9 @@ function_decl	: type ID DL_LPAREN param_list DL_RPAREN DL_LBRACE block DL_RBRACE
                     }
                 | VOID ID DL_LPAREN  DL_RPAREN DL_LBRACE block DL_RBRACE
                     {
-                        /*TODO*/
+                        $$ = makeDeclNode(FUNCTION_DECL);
+                        AST_NODE* emptyParameterList = Allocate(PARAM_LIST_NODE);
+                        makeFamily($$, 4, makeIDNode("void", NORMAL_ID), makeIDNode($2, NORMAL_ID), emptyParameterList, $6);
                     }
                 ;
 
@@ -130,7 +145,7 @@ param_list	: param_list DL_COMMA  param
                 }
             | param
                 {
-                    /*TODO*/
+                    $$ = $1;
                 }
             ;
 
@@ -141,7 +156,8 @@ param		: type ID
                 }
             | type ID dim_fn
                 {
-                    /*TODO*/
+                    $$ = makeDeclNode(FUNCTION_PARAMETER_DECL);
+                    makeFamily($$, 3, $1, makeIDNode($2, NORMAL_ID), $3);
                 }
             ;
 dim_fn		: DL_LBRACK expr_null DL_RBRACK
@@ -166,7 +182,8 @@ expr_null	:expr
 
 block           : decl_list stmt_list
                     {
-                        /*TODO*/
+                        $$ = Allocate(BLOCK_NODE);
+                        makeFamily($$, 2, $1, $2);
                     }
                 | stmt_list
                     {
@@ -179,7 +196,7 @@ block           : decl_list stmt_list
                         makeChild($$, makeChild(Allocate(VARIABLE_DECL_LIST_NODE), $1));
                     }
                 |   {
-                        /*TODO*/
+                        $$ = Allocate(BLOCK_NODE);
                     }
                 ;
 
@@ -205,21 +222,25 @@ decl		: type_decl
 
 type_decl 	: TYPEDEF type id_list DL_SEMICOL
                 {
-                    /*TODO*/
+                    $$ = makeDeclNode(TYPE_DECL);
+                    makeFamily($$, 2, $2, $3);
                 }
             | TYPEDEF VOID id_list DL_SEMICOL
                 {
-                    /*TODO*/
+                    $$ = makeDeclNode(TYPE_DECL);
+                    makeFamily($$, 2, makeIDNode("void", NORMAL_ID), $3);
                 }
             ;
 
 var_decl	: type init_id_list DL_SEMICOL
                 {
-                    /*TODO*/
+                    $$ = makeDeclNode(VARIABLE_DECL);
+                    makeFamily($$, 2, $1, $2);
                 }
             | ID id_list DL_SEMICOL
                 {
-                    /*TODO*/
+                    $$ = makeDeclNode(VARIABLE_DECL);
+                    makeFamily($$, 2, makeIDNode($1, NORMAL_ID), $2);
                 }
             ;
 
@@ -231,6 +252,10 @@ type		: INT
                 {
                     $$ = makeIDNode("float", NORMAL_ID);
                 }
+            /*| ID
+                {
+                }
+            */
             ;
 
 id_list		: ID
@@ -239,7 +264,7 @@ id_list		: ID
                 }
             | id_list DL_COMMA ID
                 {
-                    /*TODO*/
+                    $$ = makeSibling($1, makeIDNode($3, NORMAL_ID));
                 }
             | id_list DL_COMMA ID dim_decl
                 {
@@ -298,11 +323,11 @@ cfactor:	CONST
 
 init_id_list	: init_id
                     {
-                        /*TODO*/
+                        $$ = $1;
                     }
                 | init_id_list DL_COMMA init_id
                     {
-                        /*TODO*/
+                        $$ = makeSibling($1, $3);
                     }
                 ;
 
@@ -313,10 +338,13 @@ init_id		: ID
             | ID dim_decl
                 {
                     /*TODO*/
+
                 }
             | ID OP_ASSIGN relop_expr
                 {
                     /*TODO*/
+                    $$ = makeIDNode($1, NORMAL_ID);
+                    makeChild($$, $3);
                 }
             ;
 
@@ -381,12 +409,6 @@ nonempty_assign_expr_list        : nonempty_assign_expr_list DL_COMMA assign_exp
                                         /*TODO*/
                                     }
                                  ;
-
-test		: assign_expr
-                {
-                    $$ = $1;
-                }
-            ;
 
 assign_expr     : ID OP_ASSIGN relop_expr
                     {
