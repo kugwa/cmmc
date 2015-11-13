@@ -1,21 +1,21 @@
 /* 2015/10 functions to support printGV() */
 
 #include "ast.h"
+#include <assert.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 
 
-char *AST_TYPE_string[] = {"PROGRAM", "GLOBAL_DECL_LIST", "GLOBAL_DECL", "DECL_LIST", "FUNCTION_DECL", "PARAM_LIST", "PARAM", "DIM_FN", "DIMFN1", "EXPR_NULL", "BLOCK", "DECL", "TYPE_DECL", "VAR_DECL",
+const char *AST_TYPE_string[] = {"PROGRAM", "GLOBAL_DECL_LIST", "GLOBAL_DECL", "DECL_LIST", "FUNCTION_DECL", "PARAM_LIST", "PARAM", "DIM_FN", "DIMFN1", "EXPR_NULL", "BLOCK", "DECL", "TYPE_DECL", "VAR_DECL",
     "TYPE", "STRUCT_TYPE", "DEF_LIST", "DEF", "OPT_TAG", "TAG", "ID_LIST", "DIM_DECL", "CEXPR", "MCEXPR", "CFACTOR", "INIT_ID_LIST", "INIT_ID", "STMT_LIST", "STMT", "ASSIGN_EXPR_LIST",
     "NONEMPTY_ASSIGN_EXPR_LIST", "TEST", "ASSIGN_EXPR", "RELOP_EXPR", "RELOP_TERM", "RELOP_FACTOR", "REL_OP", "RELOP_EXPR_LIST", "NONEMPTY_RELOP_EXPR_LIST", "EXPR", "ADD_OP", "TERM",
     "MUL_OP", "FACTOR", "VAR_REF", "DIM", "STRUCT_TAIL", "NUL","ID_value", "CONST_value"};
 
-int printGVNode(FILE *fp, AST_NODE* node, int count);
-
-char *printLabelString(FILE *fp, AST_NODE *astNode)
+static void printLabelString(FILE *fp, AST_NODE *astNode)
 {
-    char *binaryOpString[] = {
+    const char *binaryOpString[] = {
         "+",
         "-",
         "*",
@@ -29,7 +29,7 @@ char *printLabelString(FILE *fp, AST_NODE *astNode)
         "&&",
         "||"
     };
-    char *unaryOpString[] = {
+    const char *unaryOpString[] = {
         "+",
         "-",
         "!"
@@ -54,6 +54,8 @@ char *printLabelString(FILE *fp, AST_NODE *astNode)
                 case FUNCTION_PARAMETER_DECL:
                     fprintf(fp, "FUNCTION_PARAMETER_DECL");
                     break;
+                default:
+                    assert(false);
             }
             break;
         case IDENTIFIER_NODE:
@@ -69,6 +71,8 @@ char *printLabelString(FILE *fp, AST_NODE *astNode)
                 case WITH_INIT_ID:
                     fprintf(fp, "WITH_INIT_ID");
                     break;
+                default:
+                    assert(false);
             }
             break;
         case PARAM_LIST_NODE:
@@ -107,6 +111,8 @@ char *printLabelString(FILE *fp, AST_NODE *astNode)
                 case RETURN_STMT:
                     fprintf(fp, "RETURN_STMT");
                     break;
+                default:
+                    assert(false);
             }
             break;
         case EXPR_NODE:
@@ -118,6 +124,8 @@ char *printLabelString(FILE *fp, AST_NODE *astNode)
                 case UNARY_OPERATION:
                     fprintf(fp, "%s", unaryOpString[astNode->semantic_value.exprSemanticValue.op.unaryOp]);
                     break;
+                default:
+                    assert(false);
             }
             break;
         case CONST_VALUE_NODE:
@@ -135,6 +143,8 @@ char *printLabelString(FILE *fp, AST_NODE *astNode)
                     astNode->semantic_value.const1->const_u.sc[strlen(astNode->semantic_value.const1->const_u.sc)] = '"';
                     astNode->semantic_value.const1->const_u.sc[strlen(astNode->semantic_value.const1->const_u.sc) + 1] = 0;
                     break;
+                default:
+                    assert(false);
             }
             break;
         case NONEMPTY_ASSIGN_EXPR_LIST_NODE:
@@ -149,31 +159,9 @@ char *printLabelString(FILE *fp, AST_NODE *astNode)
     }
 }
 
-void printGV(AST_NODE *root, char* fileName)
-{
-    if (fileName == NULL) {
-        fileName = "AST_Graph.gv";
-    }
-    FILE *fp;
-    fp = fopen(fileName, "w");
-    if (!fp) {
-        printf("Cannot open file \"%s\"\n", fileName);
-        return;
-    }
-    fprintf(fp , "Digraph AST\n");
-    fprintf(fp , "{\n");
-    fprintf(fp , "label = \"%s\"\n", fileName);
-
-    int nodeCount = 0;
-    printGVNode(fp, root, nodeCount);
-
-    fprintf(fp , "}\n");
-    fclose(fp);
-}
-
 // count: the (unused) id number to be used
 // return: then next unused id number
-int printGVNode(FILE *fp, AST_NODE* node, int count)
+static int printGVNode(FILE *fp, AST_NODE* node, int count)
 {
     if (node == NULL) {
         return count;
@@ -199,3 +187,24 @@ int printGVNode(FILE *fp, AST_NODE* node, int count)
     return countAfterCheckSibling;
 }
 
+void printGV(AST_NODE *root, const char* fileName)
+{
+    if (fileName == NULL) {
+        fileName = "AST_Graph.gv";
+    }
+    FILE *fp;
+    fp = fopen(fileName, "w");
+    if (!fp) {
+        printf("Cannot open file \"%s\"\n", fileName);
+        return;
+    }
+    fprintf(fp , "Digraph AST\n");
+    fprintf(fp , "{\n");
+    fprintf(fp , "label = \"%s\"\n", fileName);
+
+    int nodeCount = 0;
+    printGVNode(fp, root, nodeCount);
+
+    fprintf(fp , "}\n");
+    fclose(fp);
+}

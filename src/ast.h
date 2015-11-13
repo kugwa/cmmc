@@ -176,4 +176,7 @@ AST_NODE* makeDeclNode(DECL_KIND declKind);
 AST_NODE* makeExprNode(EXPR_KIND exprKind, int operationEnumValue);
 void semanticAnalysis(AST_NODE *root);
 
+// Functions exported by draw.c
+void printGV(AST_NODE *root, const char* fileName);
+
 #endif
