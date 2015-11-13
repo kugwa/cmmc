@@ -51,6 +51,8 @@ extern int g_anyErrorOccur;
 %token ERROR
 %token RETURN
 
+%right DL_RPAREN ELSE
+
 %{
 #include "lexer.c"
 
@@ -386,16 +388,16 @@ stmt		: DL_LBRACE block DL_RBRACE
                     $$ = makeStmtNode(ASSIGN_STMT);
                     makeFamily($$, 2, $1, $3);
                 }
-            /*
             | IF DL_LPAREN relop_expr DL_RPAREN stmt
                 {
                     $$ = makeStmtNode(IF_STMT);
-                    makeFamily($$, 2, $3, $5);
+                    makeFamily($$, 3, $3, $5, Allocate(NUL_NODE));
                 }
-            | TODO: if then else
+            | IF DL_LPAREN relop_expr DL_RPAREN stmt ELSE stmt
                 {
+                    $$ = makeStmtNode(IF_STMT);
+                    makeFamily($$, 3, $3, $5, $7);
                 }
-            */
             | ID DL_LPAREN relop_expr_list DL_RPAREN DL_SEMICOL
                 {
                     $$ = makeStmtNode(FUNCTION_CALL_STMT);
@@ -440,7 +442,7 @@ nonempty_assign_expr_list        : nonempty_assign_expr_list DL_COMMA assign_exp
 assign_expr     : ID OP_ASSIGN relop_expr
                     {
                         $$ = makeStmtNode(ASSIGN_STMT);
-                        makeFamily($$, 2, $1, $3);
+                        makeFamily($$, 2, makeIDNode($1, NORMAL_ID), $3);
                     }
                 | relop_expr
                     {
