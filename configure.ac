@@ -10,6 +10,10 @@ AC_CONFIG_HEADERS([config.h])
 AM_INIT_AUTOMAKE([foreign subdir-objects])
 AM_SILENT_RULES([yes])
 
+# We need POSIX functions
+AC_DEFINE([_POSIX_C_SOURCE], [200809L], [Enable POSIX.1-2008 support])
+AC_DEFINE([_XOPEN_SOURCE], [700], [Enable X/OPEN system interfaces])
+
 # Checks for programs.
 AC_PROG_CC
 AC_PROG_CC_STDC

@@ -1,4 +1,7 @@
 /* 2015/10 functions to support printGV() */
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
 
 #include "ast.h"
 #include <assert.h>
