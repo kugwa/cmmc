@@ -3,7 +3,9 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
+#include "ast.h"
 #include "symbol-table.h"
+#include "src/libparser_a-parser.h"
 
 #define SIZE_OF_ARR(x) (sizeof(x)/sizeof(x[0]))
 

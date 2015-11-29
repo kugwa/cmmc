@@ -28,10 +28,10 @@ libparser_a_SOURCES =		\
 	src/parser.y		\
 	$(NULL)
 
-src/lexer.o:
-	@touch src/lexer.o
-
-BUILT_SOURCES = src/lexer.c src/libparser_a-parser.h
+BUILT_SOURCES =				\
+	src/lexer.c			\
+	src/libparser_a-parser.h	\
+	$(NULL)
 
 submit_dir_name = hw
 submit_tarball_prefix = b01902054_b01902062

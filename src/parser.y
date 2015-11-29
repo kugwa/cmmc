@@ -8,8 +8,13 @@
 #include <string.h>
 #include "ast.h"
 
+extern int yylex(void);
+static void yyerror(const char *mesg);
+
 AST_NODE *prog;
 
+extern char *yytext;
+extern int line_number;
 extern int g_anyErrorOccur;
 %}
 
@@ -56,17 +61,6 @@ extern int g_anyErrorOccur;
 %token RETURN
 
 %right DL_RPAREN ELSE
-
-%{
-#include "lexer.c"
-
-int yyerror (char *mesg)
-{
-    fprintf(stderr, "Error found in Line \t%d\tnext token: \t%s\n",
-        line_number, yytext);
-    exit(1);
-}
-%}
 
 %type <node> program global_decl_list global_decl function_decl block stmt_list
 %type <node> decl_list decl var_decl type init_id_list init_id stmt relop_expr
@@ -693,3 +687,9 @@ dim_list	: dim_list DL_LBRACK expr DL_RBRACK
 
 %%
 
+static void yyerror(const char *mesg)
+{
+    fprintf(stderr, "Error found in Line \t%d\tnext token: \t%s\n",
+        line_number, yytext);
+    exit(1);
+}
