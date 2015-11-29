@@ -3,10 +3,11 @@
 # include "config.h"
 #endif
 
+#include "ast.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "ast.h"
 
 extern int yylex(void);
 static void yyerror(const char *mesg);

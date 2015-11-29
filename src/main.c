@@ -2,10 +2,11 @@
 # include "config.h"
 #endif
 
+#include "ast.h"
+#include "libparser_a-parser.h"
+
 #include <stdio.h>
 #include <stdlib.h>
-#include "ast.h"
-#include "src/libparser_a-parser.h"
 
 extern FILE *yyin;
 extern AST_NODE *prog;

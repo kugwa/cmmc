@@ -2,10 +2,12 @@
 # include "config.h"
 #endif
 
+#include "ast.h"
+
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "ast.h"
+
 
 extern int line_number;
 

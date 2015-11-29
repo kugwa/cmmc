@@ -7,7 +7,7 @@ EXTRA_DIST = autogen.sh Makefile.simple
 bin_PROGRAMS = parser
 noinst_LIBRARIES = libparser.a
 
-AM_CPPFLAGS = -I$(top_srcdir)/src
+AM_CPPFLAGS = -I$(top_srcdir)/src -I$(top_builddir)/src
 
 parser_CFLAGS = $(WARN_CFLAGS)
 parser_SOURCES =		\

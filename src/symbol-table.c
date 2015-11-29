@@ -2,12 +2,13 @@
 # include "config.h"
 #endif
 
+#include "symbol-table.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
 #include <math.h>
-#include "symbol-table.h"
 
 #define TABLE_SIZE    256
 
