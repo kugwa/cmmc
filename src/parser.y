@@ -77,18 +77,17 @@ extern int g_anyErrorOccur;
 
 /* ==== Grammar Section ==== */
 
-/* Productions */               /* Semantic actions */
-program     : global_decl_list
-                {
-                        $$=Allocate(PROGRAM_NODE);
-                        makeChild($$,$1);
-                        prog=$$;
-                }
-            |
-                {
-                        $$=Allocate(PROGRAM_NODE); prog=$$;
-                }
-            ;
+program         : global_decl_list
+                    {
+                            $$=Allocate(PROGRAM_NODE);
+                            makeChild($$,$1);
+                            prog=$$;
+                    }
+                |
+                    {
+                            $$=Allocate(PROGRAM_NODE); prog=$$;
+                    }
+                ;
 
 global_decl_list: global_decl_list global_decl
                     {
@@ -100,19 +99,19 @@ global_decl_list: global_decl_list global_decl
                     }
                 ;
 
-global_decl : type_decl
-                {
-                    $$ = $1;
-                }
-            | var_decl
-                {
-                    $$ = $1;
-                }
-            | function_decl
-                {
-                    $$ = $1;
-                }
-            ;
+global_decl     : type_decl
+                    {
+                        $$ = $1;
+                    }
+                | var_decl
+                    {
+                        $$ = $1;
+                    }
+                | function_decl
+                    {
+                        $$ = $1;
+                    }
+                ;
 
 function_decl   : type ID DL_LPAREN param_list DL_RPAREN DL_LBRACE block DL_RBRACE
                     {
@@ -163,6 +162,7 @@ param       : type ID
                     makeFamily($$, 2, $1, makeChild(makeIDNode($2, ARRAY_ID), $3));
                 }
             ;
+
 dim_fn      : DL_LBRACK expr_null DL_RBRACK
                 {
                     $$ = $2;
@@ -183,25 +183,25 @@ expr_null   :expr
                 }
             ;
 
-block           : decl_list stmt_list
-                    {
-                        $$ = Allocate(BLOCK_NODE);
-                        makeFamily($$, 2, makeChild(Allocate(VARIABLE_DECL_LIST_NODE), $1), makeChild(Allocate(STMT_LIST_NODE), $2));
-                    }
-                | stmt_list
-                    {
-                        $$ = Allocate(BLOCK_NODE);
-                        makeChild($$, makeChild(Allocate(STMT_LIST_NODE), $1));
-                    }
-                | decl_list
-                    {
-                        $$ = Allocate(BLOCK_NODE);
-                        makeChild($$, makeChild(Allocate(VARIABLE_DECL_LIST_NODE), $1));
-                    }
-                |   {
-                        $$ = Allocate(BLOCK_NODE);
-                    }
-                ;
+block       : decl_list stmt_list
+                {
+                    $$ = Allocate(BLOCK_NODE);
+                    makeFamily($$, 2, makeChild(Allocate(VARIABLE_DECL_LIST_NODE), $1), makeChild(Allocate(STMT_LIST_NODE), $2));
+                }
+            | stmt_list
+                {
+                    $$ = Allocate(BLOCK_NODE);
+                    makeChild($$, makeChild(Allocate(STMT_LIST_NODE), $1));
+                }
+            | decl_list
+                {
+                    $$ = Allocate(BLOCK_NODE);
+                    makeChild($$, makeChild(Allocate(VARIABLE_DECL_LIST_NODE), $1));
+                }
+            |   {
+                    $$ = Allocate(BLOCK_NODE);
+                }
+            ;
 
 decl_list   : decl_list decl
                 {
@@ -274,6 +274,7 @@ id_list     : ID
                     $$ = makeChild(makeIDNode($1, ARRAY_ID), $2);
                 }
             ;
+
 dim_decl    : DL_LBRACK cexpr DL_RBRACK
                 {
                     $$ = $2;
@@ -283,6 +284,7 @@ dim_decl    : DL_LBRACK cexpr DL_RBRACK
                     $$ = makeSibling($1, $3);
                 }
             ;
+
 cexpr       : cexpr OP_ADD mcexpr
                 {
                     $$ = makeExprNode(BINARY_OPERATION, BINARY_OP_ADD);
@@ -298,6 +300,7 @@ cexpr       : cexpr OP_ADD mcexpr
                     $$ = $1;
                 }
             ;
+
 mcexpr      : mcexpr OP_MUL cfactor
                 {
                     $$ = makeExprNode(BINARY_OPERATION, BINARY_OP_MUL);
@@ -325,15 +328,15 @@ cfactor:    CONST
                 }
             ;
 
-init_id_list    : init_id
-                    {
-                        $$ = $1;
-                    }
-                | init_id_list DL_COMMA init_id
-                    {
-                        $$ = makeSibling($1, $3);
-                    }
-                ;
+init_id_list: init_id
+                {
+                    $$ = $1;
+                }
+            | init_id_list DL_COMMA init_id
+                {
+                    $$ = makeSibling($1, $3);
+                }
+            ;
 
 init_id     : ID
                 {
@@ -359,8 +362,6 @@ stmt_list   : stmt_list stmt
                     $$ = $1;
                 }
             ;
-
-
 
 stmt        : DL_LBRACE block DL_RBRACE
                 {
@@ -411,26 +412,26 @@ stmt        : DL_LBRACE block DL_RBRACE
                 }
             ;
 
-assign_expr_list : nonempty_assign_expr_list
-                     {
-                         $$ = Allocate(NONEMPTY_ASSIGN_EXPR_LIST_NODE);
-                         makeChild($$, $1);
-                     }
-                 |
-                     {
-                         $$ = Allocate(NUL_NODE);
-                     }
-                 ;
+assign_expr_list: nonempty_assign_expr_list
+                    {
+                        $$ = Allocate(NONEMPTY_ASSIGN_EXPR_LIST_NODE);
+                        makeChild($$, $1);
+                    }
+                |
+                    {
+                        $$ = Allocate(NUL_NODE);
+                    }
+                ;
 
-nonempty_assign_expr_list        : nonempty_assign_expr_list DL_COMMA assign_expr
-                                    {
-                                        $$ = makeSibling($1, $3);
-                                    }
-                                 | assign_expr
-                                    {
-                                        $$ = $1;
-                                    }
-                                 ;
+nonempty_assign_expr_list   : nonempty_assign_expr_list DL_COMMA assign_expr
+                               {
+                                   $$ = makeSibling($1, $3);
+                               }
+                            | assign_expr
+                               {
+                                   $$ = $1;
+                               }
+                            ;
 
 assign_expr     : ID OP_ASSIGN relop_expr
                     {
@@ -443,27 +444,27 @@ assign_expr     : ID OP_ASSIGN relop_expr
                     }
                 ;
 
-relop_expr  : relop_term
-                {
-                    $$ = $1;
-                }
-            | relop_expr OP_OR relop_term
-                {
-                    $$ = makeExprNode(BINARY_OPERATION, BINARY_OP_OR);
-                    makeFamily($$, 2, $1, $3);
-                }
-            ;
+relop_expr      : relop_term
+                    {
+                        $$ = $1;
+                    }
+                | relop_expr OP_OR relop_term
+                    {
+                        $$ = makeExprNode(BINARY_OPERATION, BINARY_OP_OR);
+                        makeFamily($$, 2, $1, $3);
+                    }
+                ;
 
-relop_term  : relop_factor
-                {
-                    $$ = $1;
-                }
-            | relop_term OP_AND relop_factor
-                {
-                    $$ = makeExprNode(BINARY_OPERATION, BINARY_OP_AND);
-                    makeFamily($$, 2, $1, $3);
-                }
-            ;
+relop_term      : relop_factor
+                    {
+                        $$ = $1;
+                    }
+                | relop_term OP_AND relop_factor
+                    {
+                        $$ = makeExprNode(BINARY_OPERATION, BINARY_OP_AND);
+                        makeFamily($$, 2, $1, $3);
+                    }
+                ;
 
 relop_factor    : expr
                     {
@@ -476,31 +477,31 @@ relop_factor    : expr
                     }
                 ;
 
-rel_op      : OP_EQ
-                {
-                    $$ = makeExprNode(BINARY_OPERATION, BINARY_OP_EQ);
-                }
-            | OP_GE
-                {
-                    $$ = makeExprNode(BINARY_OPERATION, BINARY_OP_GE);
-                }
-            | OP_LE
-                {
-                    $$ = makeExprNode(BINARY_OPERATION, BINARY_OP_LE);
-                }
-            | OP_NE
-                {
-                    $$ = makeExprNode(BINARY_OPERATION, BINARY_OP_NE);
-                }
-            | OP_GT
-                {
-                    $$ = makeExprNode(BINARY_OPERATION, BINARY_OP_GT);
-                }
-            | OP_LT
-                {
-                    $$ = makeExprNode(BINARY_OPERATION, BINARY_OP_LT);
-                }
-            ;
+rel_op          : OP_EQ
+                    {
+                        $$ = makeExprNode(BINARY_OPERATION, BINARY_OP_EQ);
+                    }
+                | OP_GE
+                    {
+                        $$ = makeExprNode(BINARY_OPERATION, BINARY_OP_GE);
+                    }
+                | OP_LE
+                    {
+                        $$ = makeExprNode(BINARY_OPERATION, BINARY_OP_LE);
+                    }
+                | OP_NE
+                    {
+                        $$ = makeExprNode(BINARY_OPERATION, BINARY_OP_NE);
+                    }
+                | OP_GT
+                    {
+                        $$ = makeExprNode(BINARY_OPERATION, BINARY_OP_GT);
+                    }
+                | OP_LT
+                    {
+                        $$ = makeExprNode(BINARY_OPERATION, BINARY_OP_LT);
+                    }
+                ;
 
 
 relop_expr_list : nonempty_relop_expr_list
@@ -514,15 +515,15 @@ relop_expr_list : nonempty_relop_expr_list
                     }
                 ;
 
-nonempty_relop_expr_list    : nonempty_relop_expr_list DL_COMMA relop_expr
-                                {
-                                    $$ = makeSibling($1, $3);
-                                }
-                            | relop_expr
-                                {
-                                    $$ = $1;
-                                }
-                            ;
+nonempty_relop_expr_list: nonempty_relop_expr_list DL_COMMA relop_expr
+                            {
+                                $$ = makeSibling($1, $3);
+                            }
+                        | relop_expr
+                            {
+                                $$ = $1;
+                            }
+                        ;
 
 expr        : expr add_op term
                 {
