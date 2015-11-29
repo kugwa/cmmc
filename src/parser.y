@@ -100,13 +100,7 @@ global_decl_list: global_decl_list global_decl
                     }
                 ;
 
-global_decl	: 
-              /* decl_list function_decl
-                {
-                    $$ = makeSibling(makeChild(Allocate(VARIABLE_DECL_LIST_NODE), $1), $2);
-                }
-              */
-              type_decl
+global_decl	: type_decl
                 {
                     $$ = $1;
                 }
