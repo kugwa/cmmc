@@ -212,3 +212,5 @@ void printGV(AST_NODE *root, const char* fileName)
     fprintf(fp , "}\n");
     fclose(fp);
 }
+
+// vim: set sw=4 ts=4 sts=4 et:

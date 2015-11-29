@@ -118,3 +118,5 @@ AST_NODE* makeExprNode(EXPR_KIND exprKind, int operationEnumValue)
     }
     return exprNode;
 }
+
+// vim: set sw=4 ts=4 sts=4 et:

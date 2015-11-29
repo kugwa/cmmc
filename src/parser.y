@@ -694,3 +694,5 @@ static void yyerror(const char *mesg)
         line_number, yytext);
     exit(1);
 }
+
+// vim: set sw=4 ts=4 sts=4 et:
