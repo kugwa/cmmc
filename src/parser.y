@@ -30,25 +30,26 @@ extern int g_anyErrorOccur;
 %token VOID
 %token INT
 %token FLOAT
+%token TYPEDEF
 %token IF
 %token ELSE
 %token WHILE
 %token FOR
-%token TYPEDEF
+%token RETURN
 %token OP_ASSIGN
 %token OP_OR
 %token OP_AND
 %token OP_NOT
-%token OP_EQ
-%token OP_NE
-%token OP_GT
-%token OP_LT
-%token OP_GE
-%token OP_LE
 %token OP_ADD
 %token OP_SUB
 %token OP_MUL
 %token OP_DIV
+%token OP_GT
+%token OP_LT
+%token OP_GE
+%token OP_LE
+%token OP_NE
+%token OP_EQ
 %token DL_LPAREN
 %token DL_RPAREN
 %token DL_LBRACK
@@ -59,17 +60,19 @@ extern int g_anyErrorOccur;
 %token DL_SEMICOL
 %token DL_DOT
 %token ERROR
-%token RETURN
 
 %right DL_RPAREN ELSE
 
-%type <node> program global_decl_list global_decl function_decl block stmt_list
-%type <node> decl_list decl var_decl type init_id_list init_id stmt relop_expr
-%type <node> relop_term relop_factor expr term factor var_ref param_list param
-%type <node> dim_fn expr_null id_list dim_decl cexpr mcexpr cfactor
-%type <node> assign_expr_list assign_expr rel_op relop_expr_list
-%type <node> nonempty_relop_expr_list add_op mul_op dim_list type_decl
-%type <node> nonempty_assign_expr_list
+%type <node> program
+%type <node> global_decl_list global_decl
+%type <node> function_decl param_list param dim_fn expr_null block
+%type <node> decl_list decl type_decl var_decl type
+%type <node> id_list dim_decl cexpr mcexpr cfactor
+%type <node> init_id_list init_id stmt_list stmt
+%type <node> assign_expr_list nonempty_assign_expr_list assign_expr
+%type <node> relop_expr relop_term relop_factor rel_op
+%type <node> relop_expr_list nonempty_relop_expr_list
+%type <node> expr add_op term mul_op factor var_ref dim_list
 
 %start program
 
