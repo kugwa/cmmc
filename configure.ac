@@ -37,6 +37,7 @@ esac
 # Checks for typedefs, structures, and compiler characteristics.
 
 # Checks for library functions.
+AC_FUNC_STRERROR_R
 
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT

@@ -1,14 +1,17 @@
 %option noyywrap
 %{
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
+
 #include "ast.h"
+#include "common.h"
 #include "libparser_a-parser.h"
 #include "symbol-table.h"
 
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
-
-#define SIZE_OF_ARR(x) (sizeof(x)/sizeof(x[0]))
 
 int line_number = 1;
 %}
@@ -59,21 +62,21 @@ ERROR           .
 
 {WS}            {}
 {ID}            {
-                    int i;
+                    size_t i;
                     char *reserved[] = {"return", "typedef", "if", "else",
                         "int", "float", "for", "void", "while"};
                     enum yytokentype reserved_token[] = {RETURN, TYPEDEF,
                         IF, ELSE, INT, FLOAT, FOR, VOID, WHILE};
                     static_assert(
-                        SIZE_OF_ARR(reserved) == SIZE_OF_ARR(reserved_token),
+                        SIZEOF_ARRAY(reserved) == SIZEOF_ARRAY(reserved_token),
                         "Reserved words array and reserved tokens array "
                         "must have the same size");
 
-                    for (i = 0; i < SIZE_OF_ARR(reserved); i++)
+                    for (i = 0; i < SIZEOF_ARRAY(reserved); i++)
                         if (strcmp(yytext, reserved[i]) == 0)
                             return reserved_token[i];
-                    if (i == SIZE_OF_ARR(reserved)) {
-                        CcmmcSymbol * ptr;
+                    if (i == SIZEOF_ARRAY(reserved)) {
+                        CcmmcSymbol *ptr;
                         ptr = ccmmc_symbol_table_lookup(yytext);
                         if (ptr == NULL)
                             ccmmc_symbol_table_insert_id(yytext, line_number);
@@ -81,15 +84,13 @@ ERROR           .
                             ptr->counter++;
                     }
                     yylval.lexeme = strdup(yytext);
-                    if (yylval.lexeme == NULL) {
-                        fputs("strdup() failed\n", stderr);
-                        exit(1);
-                    }
+                    ERR_FATAL_CHECK(yylval.lexeme, strdup);
                     return ID;
                 }
 {CONST_INT}     {
                     CON_Type *p;
-                    p = (CON_Type *)malloc(sizeof(CON_Type));
+                    p = malloc(sizeof(CON_Type));
+                    ERR_FATAL_CHECK(p, malloc);
                     p->const_type = INTEGERC;
                     p->const_u.intval = atoi(yytext);
                     yylval.const1 = p;
@@ -97,7 +98,8 @@ ERROR           .
                 }
 {CONST_FLOAT}   {
                     CON_Type *p;
-                    p = (CON_Type *)malloc(sizeof(CON_Type));
+                    p = malloc(sizeof(CON_Type));
+                    ERR_FATAL_CHECK(p, malloc);
                     p->const_type = FLOATC;
                     p->const_u.fval = atof(yytext);
                     yylval.const1 = p;
@@ -105,15 +107,16 @@ ERROR           .
                 }
 {CONST_STRING}  {
                     CON_Type *p;
-                    p = (CON_Type *)malloc(sizeof(CON_Type));
+                    p = malloc(sizeof(CON_Type));
+                    ERR_FATAL_CHECK(p, malloc);
                     p->const_type = STRINGC;
                     p->const_u.sc = strdup(yytext);
+                    ERR_FATAL_CHECK(p->const_u.sc, strdup);
                     yylval.const1 = p;
                     return CONST;
                 }
 {COMMENT}       {
-                    int i;
-                    for (i = 0; yytext[i]; i++)
+                    for (size_t i = 0; yytext[i] != '\0'; i++)
                         if (yytext[i] == '\n')
                             line_number++;
                 }

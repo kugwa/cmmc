@@ -12,6 +12,7 @@ AM_CPPFLAGS = -I$(top_srcdir)/src -I$(top_builddir)/src
 parser_CFLAGS = $(WARN_CFLAGS)
 parser_SOURCES =		\
 	src/main.c		\
+	src/common.h		\
 	src/draw.c		\
 	src/ast.h		\
 	src/ast.c		\
