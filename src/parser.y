@@ -1,7 +1,13 @@
+%define api.prefix {ccmmc_parser_}
+%define api.pure full
+%lex-param {yyscan_t scanner}
+%parse-param {yyscan_t scanner}
 %{
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
+
+typedef void* yyscan_t;
 
 #include "ast.h"
 
@@ -9,12 +15,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-extern int yylex(void);
-static void yyerror(const char *mesg);
-
 AST_NODE *prog;
 
-extern char *yytext;
 extern int line_number;
 extern int g_anyErrorOccur;
 %}
@@ -24,6 +26,12 @@ extern int g_anyErrorOccur;
     CON_Type  *const1;
     AST_NODE  *node;
 };
+
+%{
+extern char *ccmmc_parser_get_text(yyscan_t scanner);
+extern int ccmmc_parser_lex(CCMMC_PARSER_STYPE *yylval, yyscan_t scanner);
+static void ccmmc_parser_error(yyscan_t scanner, const char *mesg);
+%}
 
 %token <lexeme>ID
 %token <const1>CONST
@@ -686,10 +694,10 @@ dim_list    : dim_list DL_LBRACK expr DL_RBRACK
 
 %%
 
-static void yyerror(const char *mesg)
+static void ccmmc_parser_error(yyscan_t scanner, const char *mesg)
 {
     fprintf(stderr, "Error found in Line \t%d\tnext token: \t%s\n",
-        line_number, yytext);
+        line_number, ccmmc_parser_get_text(scanner));
     exit(1);
 }
 

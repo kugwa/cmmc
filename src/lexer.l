@@ -1,4 +1,6 @@
-%option noyywrap
+%option noyywrap reentrant bison-bridge
+%option outfile="lex.yy.c"
+%option prefix="ccmmc_parser_"
 %{
 #ifdef HAVE_CONFIG_H
 # include "config.h"
@@ -14,6 +16,8 @@
 #include <string.h>
 
 int line_number = 1;
+
+#define YYSTYPE CCMMC_PARSER_STYPE
 %}
 
 letter          [A-Za-z]
@@ -65,8 +69,8 @@ ERROR           .
                     size_t i;
                     char *reserved[] = {"return", "typedef", "if", "else",
                         "int", "float", "for", "void", "while"};
-                    enum yytokentype reserved_token[] = {RETURN, TYPEDEF,
-                        IF, ELSE, INT, FLOAT, FOR, VOID, WHILE};
+                    enum ccmmc_parser_tokentype reserved_token[] = {RETURN,
+                        TYPEDEF, IF, ELSE, INT, FLOAT, FOR, VOID, WHILE};
                     static_assert(
                         SIZEOF_ARRAY(reserved) == SIZEOF_ARRAY(reserved_token),
                         "Reserved words array and reserved tokens array "
@@ -83,8 +87,8 @@ ERROR           .
                         else
                             ptr->counter++;
                     }
-                    yylval.lexeme = strdup(yytext);
-                    ERR_FATAL_CHECK(yylval.lexeme, strdup);
+                    yylval->lexeme = strdup(yytext);
+                    ERR_FATAL_CHECK(yylval->lexeme, strdup);
                     return ID;
                 }
 {CONST_INT}     {
@@ -93,7 +97,7 @@ ERROR           .
                     ERR_FATAL_CHECK(p, malloc);
                     p->const_type = INTEGERC;
                     p->const_u.intval = atoi(yytext);
-                    yylval.const1 = p;
+                    yylval->const1 = p;
                     return CONST;
                 }
 {CONST_FLOAT}   {
@@ -102,7 +106,7 @@ ERROR           .
                     ERR_FATAL_CHECK(p, malloc);
                     p->const_type = FLOATC;
                     p->const_u.fval = atof(yytext);
-                    yylval.const1 = p;
+                    yylval->const1 = p;
                     return CONST;
                 }
 {CONST_STRING}  {
@@ -112,7 +116,7 @@ ERROR           .
                     p->const_type = STRINGC;
                     p->const_u.sc = strdup(yytext);
                     ERR_FATAL_CHECK(p->const_u.sc, strdup);
-                    yylval.const1 = p;
+                    yylval->const1 = p;
                     return CONST;
                 }
 {COMMENT}       {
