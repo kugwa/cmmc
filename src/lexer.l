@@ -8,14 +8,14 @@
 
 #include "ast.h"
 #include "common.h"
-#include "libparser_a-parser.h"
+#include "state.h"
 #include "symbol-table.h"
+
+#include "libparser_a-parser.h"
 
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
-
-int line_number = 1;
 
 #define YYSTYPE CCMMC_PARSER_STYPE
 %}
@@ -80,10 +80,11 @@ ERROR           .
                         if (strcmp(yytext, reserved[i]) == 0)
                             return reserved_token[i];
                     if (i == SIZEOF_ARRAY(reserved)) {
-                        CcmmcSymbol *ptr;
-                        ptr = ccmmc_symbol_table_lookup(yytext);
+                        CcmmcSymbol *ptr = ccmmc_symbol_table_lookup(yytext);
+                        CcmmcState *state = yyextra;
                         if (ptr == NULL)
-                            ccmmc_symbol_table_insert_id(yytext, line_number);
+                            ccmmc_symbol_table_insert_id(
+                                yytext, state->line_number);
                         else
                             ptr->counter++;
                     }
@@ -120,9 +121,10 @@ ERROR           .
                     return CONST;
                 }
 {COMMENT}       {
+                    CcmmcState *state = yyextra;
                     for (size_t i = 0; yytext[i] != '\0'; i++)
                         if (yytext[i] == '\n')
-                            line_number++;
+                            state->line_number++;
                 }
 {OP_ASSIGN}     return OP_ASSIGN;
 {OP_OR}         return OP_OR;
@@ -139,8 +141,10 @@ ERROR           .
 {OP_NE}         return OP_NE;
 {OP_EQ}         return OP_EQ;
 
-{NEWLINE}       line_number++;
-
+{NEWLINE}       {
+                    CcmmcState *state = yyextra;
+                    state->line_number++;
+                }
 {DL_LPAREN}     return DL_LPAREN;
 {DL_RPAREN}     return DL_RPAREN;
 {DL_LBRACK}     return DL_LBRACK;
@@ -152,8 +156,9 @@ ERROR           .
 {DL_DOT}        return DL_DOT;
 
 {ERROR}         {
-                    fprintf(stderr, "%d: error: undefined character `%s'\n",
-                        line_number, yytext);
+                    CcmmcState *state = yyextra;
+                    fprintf(stderr, "%zu: error: undefined character `%s'\n",
+                        state->line_number, yytext);
                     exit(1);
                 }
 

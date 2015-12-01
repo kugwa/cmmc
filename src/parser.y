@@ -1,7 +1,7 @@
 %define api.prefix {ccmmc_parser_}
 %define api.pure full
 %lex-param {yyscan_t scanner}
-%parse-param {yyscan_t scanner}
+%parse-param {yyscan_t scanner} {CcmmcState *state}
 %{
 #ifdef HAVE_CONFIG_H
 # include "config.h"
@@ -10,15 +10,11 @@
 typedef void* yyscan_t;
 
 #include "ast.h"
+#include "state.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-AST_NODE *prog;
-
-extern int line_number;
-extern int g_anyErrorOccur;
 %}
 
 %union{
@@ -28,9 +24,9 @@ extern int g_anyErrorOccur;
 };
 
 %{
-extern char *ccmmc_parser_get_text(yyscan_t scanner);
 extern int ccmmc_parser_lex(CCMMC_PARSER_STYPE *yylval, yyscan_t scanner);
-static void ccmmc_parser_error(yyscan_t scanner, const char *mesg);
+extern char *ccmmc_parser_get_text(yyscan_t scanner);
+static void ccmmc_parser_error(yyscan_t scanner, CcmmcState *state, const char *mesg);
 %}
 
 %token <lexeme>ID
@@ -92,11 +88,11 @@ program         : global_decl_list
                     {
                             $$=Allocate(PROGRAM_NODE);
                             makeChild($$,$1);
-                            prog=$$;
+                            state->ast=$$;
                     }
                 |
                     {
-                            $$=Allocate(PROGRAM_NODE); prog=$$;
+                            $$=Allocate(PROGRAM_NODE); state->ast=$$;
                     }
                 ;
 
@@ -694,10 +690,10 @@ dim_list    : dim_list DL_LBRACK expr DL_RBRACK
 
 %%
 
-static void ccmmc_parser_error(yyscan_t scanner, const char *mesg)
+static void ccmmc_parser_error(yyscan_t scanner, CcmmcState *state, const char *mesg)
 {
-    fprintf(stderr, "Error found in Line \t%d\tnext token: \t%s\n",
-        line_number, ccmmc_parser_get_text(scanner));
+    fprintf(stderr, "Error found in Line \t%zu\tnext token: \t%s\n",
+        state->line_number, ccmmc_parser_get_text(scanner));
     exit(1);
 }
 

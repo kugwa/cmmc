@@ -6,6 +6,8 @@ typedef void* yyscan_t;
 
 #include "ast.h"
 #include "common.h"
+#include "state.h"
+
 #include "libparser_a-parser.h"
 
 #include <errno.h>
@@ -15,10 +17,7 @@ typedef void* yyscan_t;
 #include <string.h>
 
 
-extern FILE *yyin;
-extern AST_NODE *prog;
-
-extern int ccmmc_parser_lex_init(yyscan_t *scanner);
+extern int ccmmc_parser_lex_init_extra(void *extra, yyscan_t *scanner);
 extern int ccmmc_parser_lex_destroy(yyscan_t *scanner);
 extern int ccmmc_parser_set_in(FILE *source_handle, yyscan_t scanner);
 
@@ -43,10 +42,14 @@ int main (int argc, char **argv)
         exit(1);
     }
 
+    CcmmcState state_struct;
+    CcmmcState *state = &state_struct;
+    ccmmc_state_init(state);
+
     yyscan_t scanner;
-    ccmmc_parser_lex_init(&scanner);
+    ccmmc_parser_lex_init_extra(state, &scanner);
     ccmmc_parser_set_in(source_handle, scanner);
-    switch (ccmmc_parser_parse(scanner)) {
+    switch (ccmmc_parser_parse(scanner, state)) {
         case 1:
             fprintf(stderr, "%s: failed because of invalid input\n", name);
             exit(1);
@@ -58,8 +61,10 @@ int main (int argc, char **argv)
     }
     ccmmc_parser_lex_destroy(scanner);
 
+    printGV(state->ast, NULL);
+
+    ccmmc_state_fini(state);
     fclose(source_handle);
-    printGV(prog, NULL);
     return 0;
 }
 

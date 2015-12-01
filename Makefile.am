@@ -16,6 +16,8 @@ parser_SOURCES =		\
 	src/draw.c		\
 	src/ast.h		\
 	src/ast.c		\
+	src/state.h		\
+	src/state.c		\
 	src/symbol-table.h	\
 	src/symbol-table.c	\
 	$(NULL)

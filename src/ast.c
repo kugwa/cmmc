@@ -9,8 +9,6 @@
 #include <stdlib.h>
 
 
-extern int line_number;
-
 AST_NODE *Allocate(AST_TYPE type)
 {
     AST_NODE *temp;
@@ -22,7 +20,6 @@ AST_NODE *Allocate(AST_TYPE type)
     temp->parent = NULL;
     // Notice that leftmostSibling is not initialized as NULL
     temp->leftmostSibling = temp;
-    temp->linenumber = line_number;
     return temp;
 }
 
