@@ -93,31 +93,20 @@ ERROR           .
                     return ID;
                 }
 {CONST_INT}     {
-                    CON_Type *p;
-                    p = malloc(sizeof(CON_Type));
-                    ERR_FATAL_CHECK(p, malloc);
-                    p->const_type = INTEGERC;
-                    p->const_u.intval = atoi(yytext);
-                    yylval->const1 = p;
+                    yylval->value_const.kind = CCMMC_KIND_CONST_INT;
+                    yylval->value_const.const_int = atoi(yytext);
                     return CONST;
                 }
 {CONST_FLOAT}   {
-                    CON_Type *p;
-                    p = malloc(sizeof(CON_Type));
-                    ERR_FATAL_CHECK(p, malloc);
-                    p->const_type = FLOATC;
-                    p->const_u.fval = atof(yytext);
-                    yylval->const1 = p;
+                    yylval->value_const.kind = CCMMC_KIND_CONST_FLOAT;
+                    yylval->value_const.const_float = atof(yytext);
                     return CONST;
                 }
 {CONST_STRING}  {
-                    CON_Type *p;
-                    p = malloc(sizeof(CON_Type));
-                    ERR_FATAL_CHECK(p, malloc);
-                    p->const_type = STRINGC;
-                    p->const_u.sc = strdup(yytext);
-                    ERR_FATAL_CHECK(p->const_u.sc, strdup);
-                    yylval->const1 = p;
+                    size_t len = strlen(yytext);
+                    yylval->value_const.kind = CCMMC_KIND_CONST_STRING;
+                    yylval->value_const.const_string = strndup(yytext + 1, len - 2);
+                    ERR_FATAL_CHECK(yylval->value_const.const_string, strdup);
                     return CONST;
                 }
 {COMMENT}       {

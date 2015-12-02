@@ -7,7 +7,7 @@
 #include <string.h>
 
 // The name of this program, which can be used in error messages
-#define name ccmmc_main_name
+#define prog_name ccmmc_main_name
 extern const char *ccmmc_main_name;
 
 // Calculate the length of an array
@@ -44,7 +44,7 @@ static char *get_err_msg(int num, char *buf, size_t len) {
 #define ERR_FATAL_CHECK(result, function) \
     if (result == NULL) { \
         ERR_DECL; \
-        fprintf(stderr, "%s: " #function ": %s\n", name, ERR_MSG); \
+        fprintf(stderr, "%s: " #function ": %s\n", prog_name, ERR_MSG); \
         exit(1); \
     }
 

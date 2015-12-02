@@ -6,6 +6,7 @@ typedef void* yyscan_t;
 
 #include "ast.h"
 #include "common.h"
+#include "draw.h"
 #include "state.h"
 
 #include "libparser_a-parser.h"
@@ -27,18 +28,18 @@ int main (int argc, char **argv)
 {
     ERR_DECL;
     setlocale (LC_ALL, "");
-    name = strrchr (argv[0], '/');
-    name = name == NULL ? name : name + 1;
+    prog_name = strrchr (argv[0], '/');
+    prog_name = prog_name == NULL ? prog_name : prog_name + 1;
 
     if (argc != 2) {
-        fprintf(stderr, "Usage: %s SOURCE\n", name);
+        fprintf(stderr, "Usage: %s SOURCE\n", prog_name);
         exit(1);
     }
 
     const char *source_name = argv[1];
     FILE *source_handle = fopen(source_name, "r");
     if (source_handle == NULL) {
-        fprintf(stderr, "%s: %s: %s\n", name, source_name, ERR_MSG);
+        fprintf(stderr, "%s: %s: %s\n", prog_name, source_name, ERR_MSG);
         exit(1);
     }
 
@@ -51,17 +52,18 @@ int main (int argc, char **argv)
     ccmmc_parser_set_in(source_handle, scanner);
     switch (ccmmc_parser_parse(scanner, state)) {
         case 1:
-            fprintf(stderr, "%s: failed because of invalid input\n", name);
+            fprintf(stderr, "%s: failed because of invalid input\n", prog_name);
             exit(1);
         case 2:
-            fprintf(stderr, "%s: failed because of memory exhaustion\n", name);
+            fprintf(stderr, "%s: failed because of memory exhaustion\n", prog_name);
             exit(1);
         default:
             ; // silence warnings
     }
     ccmmc_parser_lex_destroy(scanner);
 
-    printGV(state->ast, NULL);
+    // Dump the AST
+    ccmmc_draw_ast(stdout, source_name, state->ast);
 
     ccmmc_state_fini(state);
     fclose(source_handle);

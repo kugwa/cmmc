@@ -1,183 +1,160 @@
 #ifndef CCMMC_HEADER_AST_H
 #define CCMMC_HEADER_AST_H
 
-#define MAX_ARRAY_DIMENSION 7
+#include <stdbool.h>
+#include <stddef.h>
 
-typedef enum DATA_TYPE
-{
-    INT_TYPE,
-    FLOAT_TYPE,
-    VOID_TYPE,
-    INT_PTR_TYPE,//for parameter passing
-    FLOAT_PTR_TYPE,//for parameter passing
-    CONST_STRING_TYPE,//for "const string"
-    NONE_TYPE,//for nodes like PROGRAM_NODE which has no type
-    ERROR_TYPE
-} DATA_TYPE;
+typedef enum CcmmcAstNodeType_enum {
+    CCMMC_AST_NODE_PROGRAM,
+    CCMMC_AST_NODE_DECL,
+    CCMMC_AST_NODE_ID,
+    CCMMC_AST_NODE_PARAM_LIST,
+    CCMMC_AST_NODE_NUL,
+    CCMMC_AST_NODE_BLOCK,
+    CCMMC_AST_NODE_VARIABLE_DECL_LIST,
+    CCMMC_AST_NODE_STMT_LIST,
+    CCMMC_AST_NODE_STMT,
+    CCMMC_AST_NODE_EXPR,
+    CCMMC_AST_NODE_CONST_VALUE, // ex: 1, 2, "constant string"
+    CCMMC_AST_NODE_NONEMPTY_ASSIGN_EXPR_LIST,
+    CCMMC_AST_NODE_NONEMPTY_RELOP_EXPR_LIST
+} CcmmcAstNodeType;
 
-typedef enum IDENTIFIER_KIND
-{
-    NORMAL_ID, //function Name, uninitialized scalar variable
-    ARRAY_ID, //ID_NODE->child = dim
-    WITH_INIT_ID, //ID_NODE->child = initial value
-} IDENTIFIER_KIND;
+typedef enum CcmmcAstValueType_enum {
+    CCMMC_AST_VALUE_INT,
+    CCMMC_AST_VALUE_FLOAT,
+    CCMMC_AST_VALUE_VOID,
+    CCMMC_AST_VALUE_INT_PTR, // for parameter passing
+    CCMMC_AST_VALUE_FLOAT_PTR, // for parameter passing
+    CCMMC_AST_VALUE_CONST_STRING, // for "const string"
+    CCMMC_AST_VALUE_NONE, // for nodes like PROGRAM_NODE which has no type
+    CCMMC_AST_VALUE_ERROR
+} CcmmcAstValueType;
 
-typedef enum BINARY_OPERATOR
-{
-    BINARY_OP_ADD,
-    BINARY_OP_SUB,
-    BINARY_OP_MUL,
-    BINARY_OP_DIV,
-    BINARY_OP_EQ,
-    BINARY_OP_GE,
-    BINARY_OP_LE,
-    BINARY_OP_NE,
-    BINARY_OP_GT,
-    BINARY_OP_LT,
-    BINARY_OP_AND,
-    BINARY_OP_OR
-} BINARY_OPERATOR;
+typedef enum CcmmcKindId_enum {
+    CCMMC_KIND_ID_NORMAL, // function names, uninitialized scalar variables
+    CCMMC_KIND_ID_ARRAY, // ID_NODE->child = dim
+    CCMMC_KIND_ID_WITH_INIT, // ID_NODE->child = initializer
+} CcmmcKindId;
 
-typedef enum UNARY_OPERATOR
-{
-    UNARY_OP_POSITIVE,
-    UNARY_OP_NEGATIVE,
-    UNARY_OP_LOGICAL_NEGATION
-} UNARY_OPERATOR;
+typedef enum CcmmcKindOpBinary_enum {
+    CCMMC_KIND_OP_BINARY_ADD,
+    CCMMC_KIND_OP_BINARY_SUB,
+    CCMMC_KIND_OP_BINARY_MUL,
+    CCMMC_KIND_OP_BINARY_DIV,
+    CCMMC_KIND_OP_BINARY_EQ,
+    CCMMC_KIND_OP_BINARY_GE,
+    CCMMC_KIND_OP_BINARY_LE,
+    CCMMC_KIND_OP_BINARY_NE,
+    CCMMC_KIND_OP_BINARY_GT,
+    CCMMC_KIND_OP_BINARY_LT,
+    CCMMC_KIND_OP_BINARY_AND,
+    CCMMC_KIND_OP_BINARY_OR
+} CcmmcKindOpBin;
 
-//C_type= type of constant ex: 1, 3.3, "const string"
-//do not modify, or lexer might break
-typedef enum C_type {INTEGERC,FLOATC,STRINGC} C_type;
+typedef enum CcmmcKindOpUnary_enum {
+    CCMMC_KIND_OP_UNARY_POSITIVE,
+    CCMMC_KIND_OP_UNARY_NEGATIVE,
+    CCMMC_KIND_OP_UNARY_LOGICAL_NEGATION
+} CcmmcKindOpUnary;
 
-typedef enum STMT_KIND
-{
-    WHILE_STMT,
-    FOR_STMT,
-    ASSIGN_STMT, //TODO:for simpler implementation, assign_expr also uses this
-    IF_STMT,
-    FUNCTION_CALL_STMT,
-    RETURN_STMT,
-} STMT_KIND;
+typedef enum CcmmcKindConst_enum {
+    CCMMC_KIND_CONST_INT,
+    CCMMC_KIND_CONST_FLOAT,
+    CCMMC_KIND_CONST_STRING
+} CcmmcKindConst;
 
-typedef enum EXPR_KIND
-{
-    BINARY_OPERATION,
-    UNARY_OPERATION
-} EXPR_KIND;
+typedef enum CcmmcKindStmt_enum {
+    CCMMC_KIND_STMT_WHILE,
+    CCMMC_KIND_STMT_FOR,
+    CCMMC_KIND_STMT_ASSIGN, // TODO: for simpler implementation, assign_expr also uses this
+    CCMMC_KIND_STMT_IF,
+    CCMMC_KIND_STMT_FUNCTION_CALL,
+    CCMMC_KIND_STMT_RETURN,
+} CcmmcKindStmt;
 
-typedef enum DECL_KIND
-{
-    VARIABLE_DECL,
-    TYPE_DECL,
-    FUNCTION_DECL,
-    FUNCTION_PARAMETER_DECL
-} DECL_KIND;
+typedef enum CcmmcKindExpr_enum {
+    CCMMC_KIND_EXPR_BINARY_OP,
+    CCMMC_KIND_EXPR_UNARY_OP
+} CcmmcKindExpr;
 
-typedef enum AST_TYPE
-{
-    PROGRAM_NODE,
-    DECLARATION_NODE,
-    IDENTIFIER_NODE,
-    PARAM_LIST_NODE,
-    NUL_NODE,
-    BLOCK_NODE,
-    VARIABLE_DECL_LIST_NODE,
-    STMT_LIST_NODE,
-    STMT_NODE,
-    EXPR_NODE,
-    CONST_VALUE_NODE, //ex:1, 2, "constant string"
-    NONEMPTY_ASSIGN_EXPR_LIST_NODE,
-    NONEMPTY_RELOP_EXPR_LIST_NODE
-} AST_TYPE;
+typedef enum CcmmcKindDecl_enum {
+    CCMMC_KIND_DECL_VARIABLE,
+    CCMMC_KIND_DECL_TYPE,
+    CCMMC_KIND_DECL_FUNCTION,
+    CCMMC_KIND_DECL_FUNCTION_PARAMETER
+} CcmmcKindDecl;
 
-//*************************
-// AST_NODE's semantic value
-//*************************
+typedef struct CcmmcValueStmt_struct {
+    CcmmcKindStmt kind;
+} CcmmcValueStmt;
 
-typedef struct STMTSemanticValue
-{
-    STMT_KIND kind;
-} STMTSemanticValue;
-
-typedef struct EXPRSemanticValue
-{
-    EXPR_KIND kind;
-
-    int isConstEval;
-
-    union
-    {
-        int iValue;
-        float fValue;
-    } constEvalValue;
-
-    union
-    {
-        BINARY_OPERATOR binaryOp;
-        UNARY_OPERATOR unaryOp;
-    } op;
-} EXPRSemanticValue;
-
-typedef struct DECLSemanticValue
-{
-    DECL_KIND kind;
-} DECLSemanticValue;
-
-struct SymbolAttribute;
-
-typedef struct IdentifierSemanticValue
-{
-    char *identifierName;
-    struct SymbolTableEntry *symbolTableEntry;
-    IDENTIFIER_KIND kind;
-} IdentifierSemanticValue;
-
-typedef struct TypeSpecSemanticValue
-{
-    char *typeName;
-} TypeSpecSemanticValue;
-
-//don't modify or lexer may break
-typedef struct CON_Type{
-    C_type  const_type;
+typedef struct CcmmcValueExpr_struct {
+    CcmmcKindExpr kind;
+    bool is_const_eval;
     union {
-        int     intval;
-        double  fval;
-        char    *sc; }
-        const_u;
-} CON_Type;
-
-
-struct AST_NODE {
-    struct AST_NODE *child;
-    struct AST_NODE *parent;
-    struct AST_NODE *rightSibling;
-    struct AST_NODE *leftmostSibling;
-    AST_TYPE nodeType;
-    DATA_TYPE dataType;
-    int linenumber;
+        int const_int;
+        float const_float;
+    };
     union {
-        IdentifierSemanticValue identifierSemanticValue;
-        STMTSemanticValue stmtSemanticValue;
-        DECLSemanticValue declSemanticValue;
-        EXPRSemanticValue exprSemanticValue;
-        CON_Type *const1;
-    } semantic_value;
-};
-typedef struct AST_NODE AST_NODE;
+        CcmmcKindOpUnary op_binary;
+        CcmmcKindOpUnary op_unary;
+    };
+} CcmmcValueExpr;
 
-AST_NODE *Allocate(AST_TYPE type);
-AST_NODE* makeSibling(AST_NODE *a, AST_NODE *b);
-AST_NODE* makeChild(AST_NODE *parent, AST_NODE *child);
-AST_NODE* makeFamily(AST_NODE *parent, int childrenCount, ...);
-AST_NODE* makeIDNode(char *lexeme, IDENTIFIER_KIND idKind);
-AST_NODE* makeStmtNode(STMT_KIND stmtKind);
-AST_NODE* makeDeclNode(DECL_KIND declKind);
-AST_NODE* makeExprNode(EXPR_KIND exprKind, int operationEnumValue);
-void semanticAnalysis(AST_NODE *root);
+typedef struct CcmmcValueDecl_struct {
+    CcmmcKindDecl kind;
+} CcmmcValueDecl;
 
-// Functions exported by draw.c
-void printGV(AST_NODE *root, const char* fileName);
+typedef struct CcmmcValueId_struct {
+    CcmmcKindId kind;
+    char *name;
+    // struct SymbolTableEntry *symbolTableEntry;
+} CcmmcValueId;
+
+typedef struct CcmmcValueType_struct {
+    char *name;
+} CcmmcValueType;
+
+typedef struct CcmmcValueConst_struct {
+    CcmmcKindConst kind;
+    union {
+        int const_int;
+        float const_float;
+        char *const_string;
+    };
+} CcmmcValueConst;
+
+typedef struct CcmmcAst_struct {
+    struct CcmmcAst_struct *parent;
+    struct CcmmcAst_struct *child;
+    struct CcmmcAst_struct *leftmost_sibling;
+    struct CcmmcAst_struct *right_sibling;
+    CcmmcAstNodeType type_node;
+    CcmmcAstValueType type_value;
+    union {
+        CcmmcValueId value_id;
+        CcmmcValueStmt value_stmt;
+        CcmmcValueDecl value_decl;
+        CcmmcValueExpr value_expr;
+        CcmmcValueConst value_const;
+    };
+} CcmmcAst;
+
+CcmmcAst        *ccmmc_ast_new                      (CcmmcAstNodeType type_node);
+CcmmcAst        *ccmmc_ast_new_id                   (char *lexeme,
+                                                     CcmmcKindId kind);
+CcmmcAst        *ccmmc_ast_new_stmt                 (CcmmcKindStmt kind);
+CcmmcAst        *ccmmc_ast_new_decl                 (CcmmcKindDecl kind);
+CcmmcAst        *ccmmc_ast_new_expr                 (CcmmcKindExpr kind,
+                                                     int op_kind);
+CcmmcAst        *ccmmc_ast_append_sibling           (CcmmcAst *node,
+                                                     CcmmcAst *sibling);
+CcmmcAst        *ccmmc_ast_append_child             (CcmmcAst *parent,
+                                                     CcmmcAst *child);
+CcmmcAst        *ccmmc_ast_append_children          (CcmmcAst *parent,
+                                                     size_t children_count,
+                                                     ...);
 
 #endif
 // vim: set sw=4 ts=4 sts=4 et:

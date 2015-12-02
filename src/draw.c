@@ -1,9 +1,8 @@
-/* 2015/10 functions to support printGV() */
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
 
-#include "ast.h"
+#include "draw.h"
 
 #include <assert.h>
 #include <stdbool.h>
@@ -12,12 +11,7 @@
 #include <string.h>
 
 
-const char *AST_TYPE_string[] = {"PROGRAM", "GLOBAL_DECL_LIST", "GLOBAL_DECL", "DECL_LIST", "FUNCTION_DECL", "PARAM_LIST", "PARAM", "DIM_FN", "DIMFN1", "EXPR_NULL", "BLOCK", "DECL", "TYPE_DECL", "VAR_DECL",
-    "TYPE", "STRUCT_TYPE", "DEF_LIST", "DEF", "OPT_TAG", "TAG", "ID_LIST", "DIM_DECL", "CEXPR", "MCEXPR", "CFACTOR", "INIT_ID_LIST", "INIT_ID", "STMT_LIST", "STMT", "ASSIGN_EXPR_LIST",
-    "NONEMPTY_ASSIGN_EXPR_LIST", "TEST", "ASSIGN_EXPR", "RELOP_EXPR", "RELOP_TERM", "RELOP_FACTOR", "REL_OP", "RELOP_EXPR_LIST", "NONEMPTY_RELOP_EXPR_LIST", "EXPR", "ADD_OP", "TERM",
-    "MUL_OP", "FACTOR", "VAR_REF", "DIM", "STRUCT_TAIL", "NUL","ID_value", "CONST_value"};
-
-static void printLabelString(FILE *fp, AST_NODE *astNode)
+static void printLabelString(FILE *fp, CcmmcAst *astNode)
 {
     const char *binaryOpString[] = {
         "+",
@@ -38,123 +32,119 @@ static void printLabelString(FILE *fp, AST_NODE *astNode)
         "-",
         "!"
     };
-//    fprintf(fp, "%d ", astNode->linenumber);
-    switch (astNode->nodeType) {
-        case PROGRAM_NODE:
+    switch (astNode->type_node) {
+        case CCMMC_AST_NODE_PROGRAM:
             fprintf(fp, "PROGRAM_NODE");
             break;
-        case DECLARATION_NODE:
+        case CCMMC_AST_NODE_DECL:
             fprintf(fp, "DECLARATION_NODE ");
-            switch (astNode->semantic_value.declSemanticValue.kind) {
-                case VARIABLE_DECL:
+            switch (astNode->value_decl.kind) {
+                case CCMMC_KIND_DECL_VARIABLE:
                     fprintf(fp, "VARIABLE_DECL");
                     break;
-                case TYPE_DECL:
+                case CCMMC_KIND_DECL_TYPE:
                     fprintf(fp, "TYPE_DECL");
                     break;
-                case FUNCTION_DECL:
+                case CCMMC_KIND_DECL_FUNCTION:
                     fprintf(fp, "FUNCTION_DECL");
                     break;
-                case FUNCTION_PARAMETER_DECL:
+                case CCMMC_KIND_DECL_FUNCTION_PARAMETER:
                     fprintf(fp, "FUNCTION_PARAMETER_DECL");
                     break;
                 default:
                     assert(false);
             }
             break;
-        case IDENTIFIER_NODE:
+        case CCMMC_AST_NODE_ID:
             fprintf(fp, "IDENTIFIER_NODE ");
-            fprintf(fp, "%s ", astNode->semantic_value.identifierSemanticValue.identifierName);
-            switch (astNode->semantic_value.identifierSemanticValue.kind) {
-                case NORMAL_ID:
+            fprintf(fp, "%s ", astNode->value_id.name);
+            switch (astNode->value_id.kind) {
+                case CCMMC_KIND_ID_NORMAL:
                     fprintf(fp, "NORMAL_ID");
                     break;
-                case ARRAY_ID:
+                case CCMMC_KIND_ID_ARRAY:
                     fprintf(fp, "ARRAY_ID");
                     break;
-                case WITH_INIT_ID:
+                case CCMMC_KIND_ID_WITH_INIT:
                     fprintf(fp, "WITH_INIT_ID");
                     break;
                 default:
                     assert(false);
             }
             break;
-        case PARAM_LIST_NODE:
+        case CCMMC_AST_NODE_PARAM_LIST:
             fprintf(fp, "PARAM_LIST_NODE");
             break;
-        case NUL_NODE:
+        case CCMMC_AST_NODE_NUL:
             fprintf(fp, "NUL_NODE");
             break;
-        case BLOCK_NODE:
+        case CCMMC_AST_NODE_BLOCK:
             fprintf(fp, "BLOCK_NODE");
             break;
-        case VARIABLE_DECL_LIST_NODE:
+        case CCMMC_AST_NODE_VARIABLE_DECL_LIST:
             fprintf(fp, "VARIABLE_DECL_LIST_NODE");
             break;
-        case STMT_LIST_NODE:
+        case CCMMC_AST_NODE_STMT_LIST:
             fprintf(fp, "STMT_LIST_NODE");
             break;
-        case STMT_NODE:
+        case CCMMC_AST_NODE_STMT:
             fprintf(fp, "STMT_NODE ");
-            switch (astNode->semantic_value.stmtSemanticValue.kind) {
-                case WHILE_STMT:
+            switch (astNode->value_stmt.kind) {
+                case CCMMC_KIND_STMT_WHILE:
                     fprintf(fp, "WHILE_STMT");
                     break;
-                case FOR_STMT:
+                case CCMMC_KIND_STMT_FOR:
                     fprintf(fp, "FOR_STMT");
                     break;
-                case ASSIGN_STMT:
+                case CCMMC_KIND_STMT_ASSIGN:
                     fprintf(fp, "ASSIGN_STMT");
                     break;
-                case IF_STMT:
+                case CCMMC_KIND_STMT_IF:
                     fprintf(fp, "IF_STMT");
                     break;
-                case FUNCTION_CALL_STMT:
+                case CCMMC_KIND_STMT_FUNCTION_CALL:
                     fprintf(fp, "FUNCTION_CALL_STMT");
                     break;
-                case RETURN_STMT:
+                case CCMMC_KIND_STMT_RETURN:
                     fprintf(fp, "RETURN_STMT");
                     break;
                 default:
                     assert(false);
             }
             break;
-        case EXPR_NODE:
+        case CCMMC_AST_NODE_EXPR:
             fprintf(fp, "EXPR_NODE ");
-            switch (astNode->semantic_value.exprSemanticValue.kind) {
-                case BINARY_OPERATION:
-                    fprintf(fp, "%s", binaryOpString[astNode->semantic_value.exprSemanticValue.op.binaryOp]);
+            switch (astNode->value_expr.kind) {
+                case CCMMC_KIND_EXPR_BINARY_OP:
+                    fprintf(fp, "%s", binaryOpString[astNode->value_expr.op_binary]);
                     break;
-                case UNARY_OPERATION:
-                    fprintf(fp, "%s", unaryOpString[astNode->semantic_value.exprSemanticValue.op.unaryOp]);
+                case CCMMC_KIND_EXPR_UNARY_OP:
+                    fprintf(fp, "%s", unaryOpString[astNode->value_expr.op_unary]);
                     break;
                 default:
                     assert(false);
             }
             break;
-        case CONST_VALUE_NODE:
+        case CCMMC_AST_NODE_CONST_VALUE:
             fprintf(fp, "CONST_VALUE_NODE ");
-            switch (astNode->semantic_value.const1->const_type) {
-                case  INTEGERC:
-                    fprintf(fp, "%d", astNode->semantic_value.const1->const_u.intval);
+            switch (astNode->value_const.kind) {
+                case CCMMC_KIND_CONST_INT:
+                    fprintf(fp, "%d", astNode->value_const.const_int);
                     break;
-                case FLOATC:
-                    fprintf(fp, "%f", astNode->semantic_value.const1->const_u.fval);
+                case CCMMC_KIND_CONST_FLOAT:
+                    fprintf(fp, "%f", astNode->value_const.const_float);
                     break;
-                case STRINGC:
-                    astNode->semantic_value.const1->const_u.sc[strlen(astNode->semantic_value.const1->const_u.sc) - 1] = 0;
-                    fprintf(fp, "\\\"%s\\\"", astNode->semantic_value.const1->const_u.sc + 1);
-                    astNode->semantic_value.const1->const_u.sc[strlen(astNode->semantic_value.const1->const_u.sc)] = '"';
-                    astNode->semantic_value.const1->const_u.sc[strlen(astNode->semantic_value.const1->const_u.sc) + 1] = 0;
+                case CCMMC_KIND_CONST_STRING:
+                    fprintf(fp, "\\\"%s\\\"", astNode->value_const.const_string);
                     break;
                 default:
                     assert(false);
             }
             break;
-        case NONEMPTY_ASSIGN_EXPR_LIST_NODE:
+        case CCMMC_AST_NODE_NONEMPTY_ASSIGN_EXPR_LIST:
             fprintf(fp, "NONEMPTY_ASSIGN_EXPR_LIST_NODE");
             break;
-        case NONEMPTY_RELOP_EXPR_LIST_NODE:
+        case CCMMC_AST_NODE_NONEMPTY_RELOP_EXPR_LIST:
             fprintf(fp, "NONEMPTY_RELOP_EXPR_LIST_NODE");
             break;
         default:
@@ -165,11 +155,10 @@ static void printLabelString(FILE *fp, AST_NODE *astNode)
 
 // count: the (unused) id number to be used
 // return: then next unused id number
-static int printGVNode(FILE *fp, AST_NODE* node, int count)
+static int printGVNode(FILE *fp, CcmmcAst *node, int count)
 {
-    if (node == NULL) {
+    if (node == NULL)
         return count;
-    }
 
     int currentNodeCount = count;
     fprintf(fp, "node%d [label =\"", count);
@@ -183,34 +172,21 @@ static int printGVNode(FILE *fp, AST_NODE* node, int count)
     }
 
     int countAfterCheckSibling = countAfterCheckChildren;
-    if (node->rightSibling) {
-        countAfterCheckSibling = printGVNode(fp, node->rightSibling, countAfterCheckChildren);
+    if (node->right_sibling) {
+        countAfterCheckSibling = printGVNode(fp, node->right_sibling, countAfterCheckChildren);
         fprintf(fp, "node%d -> node%d [style = dashed]\n", currentNodeCount, countAfterCheckChildren);
     }
 
     return countAfterCheckSibling;
 }
 
-void printGV(AST_NODE *root, const char* fileName)
+void ccmmc_draw_ast (FILE *fp, const char *name, CcmmcAst *root)
 {
-    if (fileName == NULL) {
-        fileName = "AST_Graph.gv";
-    }
-    FILE *fp;
-    fp = fopen(fileName, "w");
-    if (!fp) {
-        printf("Cannot open file \"%s\"\n", fileName);
-        return;
-    }
     fprintf(fp , "Digraph AST\n");
     fprintf(fp , "{\n");
-    fprintf(fp , "label = \"%s\"\n", fileName);
-
-    int nodeCount = 0;
-    printGVNode(fp, root, nodeCount);
-
+    fprintf(fp , "label = \"%s\"\n", name);
+    printGVNode(fp, root, 0);
     fprintf(fp , "}\n");
-    fclose(fp);
 }
 
 // vim: set sw=4 ts=4 sts=4 et:

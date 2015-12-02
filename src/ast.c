@@ -3,117 +3,115 @@
 #endif
 
 #include "ast.h"
+#include "common.h"
 
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 
-AST_NODE *Allocate(AST_TYPE type)
+CcmmcAst *ccmmc_ast_new(CcmmcAstNodeType type_node)
 {
-    AST_NODE *temp;
-    temp = (AST_NODE*)malloc(sizeof(struct AST_NODE));
-    temp->nodeType = type;
-    temp->dataType = NONE_TYPE;
-    temp->child = NULL;
-    temp->rightSibling = NULL;
-    temp->parent = NULL;
+    CcmmcAst *node;
+    node = malloc(sizeof(CcmmcAst));
+    ERR_FATAL_CHECK(node, malloc);
+    node->parent = NULL;
+    node->child = NULL;
     // Notice that leftmostSibling is not initialized as NULL
-    temp->leftmostSibling = temp;
-    return temp;
+    node->leftmost_sibling = node;
+    node->right_sibling = NULL;
+    node->type_node = type_node;
+    node->type_value = CCMMC_AST_VALUE_NONE;
+    return node;
 }
 
-AST_NODE* makeSibling(AST_NODE *a, AST_NODE *b)
+CcmmcAst *ccmmc_ast_append_sibling(CcmmcAst *node, CcmmcAst *sibling)
 {
-    while (a->rightSibling) {
-        a = a->rightSibling;
-    }
-    if (b == NULL) {
-        return a;
-    }
-    b = b->leftmostSibling;
-    a->rightSibling = b;
+    while (node->right_sibling)
+        node = node->right_sibling;
+    if (sibling == NULL)
+        return node;
+    sibling = sibling->leftmost_sibling;
+    node->right_sibling = sibling;
 
-    b->leftmostSibling = a->leftmostSibling;
-    b->parent = a->parent;
-    while (b->rightSibling) {
-        b = b->rightSibling;
-        b->leftmostSibling = a->leftmostSibling;
-        b->parent = a->parent;
+    sibling->leftmost_sibling = node->leftmost_sibling;
+    sibling->parent = node->parent;
+    while (sibling->right_sibling) {
+        sibling = sibling->right_sibling;
+        sibling->leftmost_sibling = node->leftmost_sibling;
+        sibling->parent = node->parent;
     }
-    return b;
+    return sibling;
 }
 
-AST_NODE* makeChild(AST_NODE *parent, AST_NODE *child)
+CcmmcAst *ccmmc_ast_append_child(CcmmcAst *parent, CcmmcAst *child)
 {
-    if (child == NULL) {
+    if (child == NULL)
         return parent;
-    }
     if (parent->child) {
-        makeSibling(parent->child, child);
+        ccmmc_ast_append_sibling(parent->child, child);
     } else {
-        child = child->leftmostSibling;
+        child = child->leftmost_sibling;
         parent->child = child;
         while (child) {
             child->parent = parent;
-            child = child->rightSibling;
+            child = child->right_sibling;
         }
     }
     return parent;
 }
 
-AST_NODE* makeFamily(AST_NODE *parent, int childrenCount, ...)
+CcmmcAst *ccmmc_ast_append_children(
+    CcmmcAst *parent, size_t children_count, ...)
 {
-    va_list childrenList;
-    va_start(childrenList, childrenCount);
-    AST_NODE* child = va_arg(childrenList, AST_NODE*);
-    makeChild(parent, child);
-    AST_NODE* tmp = child;
-    int index = 1;
-    for (index = 1; index < childrenCount; ++index) {
-        child = va_arg(childrenList, AST_NODE*);
-        tmp = makeSibling(tmp, child);
+    va_list children_list;
+    va_start(children_list, children_count);
+    CcmmcAst *child = va_arg(children_list, CcmmcAst*);
+    ccmmc_ast_append_child(parent, child);
+    CcmmcAst *tmp = child;
+    for (size_t index = 1; index < children_count; ++index) {
+        child = va_arg(children_list, CcmmcAst*);
+        tmp = ccmmc_ast_append_sibling(tmp, child);
     }
-    va_end(childrenList);
+    va_end(children_list);
     return parent;
 }
 
-AST_NODE* makeIDNode(char *lexeme, IDENTIFIER_KIND idKind)
+CcmmcAst *ccmmc_ast_new_id(char *lexeme, CcmmcKindId kind)
 {
-    AST_NODE* identifier = Allocate(IDENTIFIER_NODE);
-    identifier->semantic_value.identifierSemanticValue.identifierName = lexeme;
-    identifier->semantic_value.identifierSemanticValue.kind = idKind;
-    identifier->semantic_value.identifierSemanticValue.symbolTableEntry = NULL;
-    return identifier;
+    CcmmcAst *node = ccmmc_ast_new(CCMMC_AST_NODE_ID);
+    node->value_id.kind = kind;
+    node->value_id.name = lexeme;
+    // node->value_id.symbolTableEntry = NULL;
+    return node;
 }
 
-AST_NODE* makeStmtNode(STMT_KIND stmtKind)
+CcmmcAst *ccmmc_ast_new_stmt(CcmmcKindStmt kind)
 {
-    AST_NODE* stmtNode = Allocate(STMT_NODE);
-    stmtNode->semantic_value.stmtSemanticValue.kind = stmtKind;
-    return stmtNode;
+    CcmmcAst *node = ccmmc_ast_new(CCMMC_AST_NODE_STMT);
+    node->value_stmt.kind = kind;
+    return node;
 }
 
-AST_NODE* makeDeclNode(DECL_KIND declKind)
+CcmmcAst *ccmmc_ast_new_decl(CcmmcKindDecl kind)
 {
-    AST_NODE* declNode = Allocate(DECLARATION_NODE);
-    declNode->semantic_value.declSemanticValue.kind = declKind;
-    return declNode;
+    CcmmcAst *node = ccmmc_ast_new(CCMMC_AST_NODE_DECL);
+    node->value_decl.kind = kind;
+    return node;
 }
 
-AST_NODE* makeExprNode(EXPR_KIND exprKind, int operationEnumValue)
+CcmmcAst *ccmmc_ast_new_expr(CcmmcKindExpr kind, int op_kind)
 {
-    AST_NODE* exprNode = Allocate(EXPR_NODE);
-    exprNode->semantic_value.exprSemanticValue.isConstEval = 0;
-    exprNode->semantic_value.exprSemanticValue.kind = exprKind;
-    if (exprKind == BINARY_OPERATION) {
-        exprNode->semantic_value.exprSemanticValue.op.binaryOp = operationEnumValue;
-    } else if (exprKind == UNARY_OPERATION) {
-        exprNode->semantic_value.exprSemanticValue.op.unaryOp = operationEnumValue;
-    } else {
-        printf("Error in AST_NODE* makeExprNode(EXPR_KIND exprKind, int operationEnumValue)\n");
-    }
-    return exprNode;
+    CcmmcAst *node = ccmmc_ast_new(CCMMC_AST_NODE_EXPR);
+    node->value_expr.kind = kind;
+    node->value_expr.is_const_eval = false;
+    if (kind == CCMMC_KIND_EXPR_BINARY_OP)
+        node->value_expr.op_binary = op_kind;
+    else if (kind == CCMMC_KIND_EXPR_UNARY_OP)
+        node->value_expr.op_unary = op_kind;
+    else
+        fprintf(stderr, "%s: invalid expression kind in %s\n", prog_name, __func__);
+    return node;
 }
 
 // vim: set sw=4 ts=4 sts=4 et:

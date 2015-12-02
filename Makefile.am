@@ -13,9 +13,10 @@ parser_CFLAGS = $(WARN_CFLAGS)
 parser_SOURCES =		\
 	src/main.c		\
 	src/common.h		\
-	src/draw.c		\
 	src/ast.h		\
 	src/ast.c		\
+	src/draw.h		\
+	src/draw.c		\
 	src/state.h		\
 	src/state.c		\
 	src/symbol-table.h	\

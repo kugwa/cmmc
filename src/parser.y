@@ -19,8 +19,8 @@ typedef void* yyscan_t;
 
 %union{
     char *lexeme;
-    CON_Type  *const1;
-    AST_NODE  *node;
+    CcmmcAst *node;
+    CcmmcValueConst value_const;
 };
 
 %{
@@ -30,7 +30,7 @@ static void ccmmc_parser_error(yyscan_t scanner, CcmmcState *state, const char *
 %}
 
 %token <lexeme>ID
-%token <const1>CONST
+%token <value_const>CONST
 %token VOID
 %token INT
 %token FLOAT
@@ -86,19 +86,20 @@ static void ccmmc_parser_error(yyscan_t scanner, CcmmcState *state, const char *
 
 program         : global_decl_list
                     {
-                            $$=Allocate(PROGRAM_NODE);
-                            makeChild($$,$1);
-                            state->ast=$$;
+                        $$ = ccmmc_ast_new(CCMMC_AST_NODE_PROGRAM);
+                        ccmmc_ast_append_child($$, $1);
+                        state->ast = $$;
                     }
                 |
                     {
-                            $$=Allocate(PROGRAM_NODE); state->ast=$$;
+                        $$ = ccmmc_ast_new(CCMMC_AST_NODE_PROGRAM);
+                        state->ast = $$;
                     }
                 ;
 
 global_decl_list: global_decl_list global_decl
                     {
-                        $$ = makeSibling($1, $2);
+                        $$ = ccmmc_ast_append_sibling($1, $2);
                     }
                 | global_decl
                     {
@@ -122,35 +123,49 @@ global_decl     : type_decl
 
 function_decl   : type ID DL_LPAREN param_list DL_RPAREN DL_LBRACE block DL_RBRACE
                     {
-                        $$ = makeDeclNode(FUNCTION_DECL);
-                        AST_NODE* parameterList = Allocate(PARAM_LIST_NODE);
-                        makeChild(parameterList, $4);
-                        makeFamily($$, 4, $1, makeIDNode($2, NORMAL_ID), parameterList, $7);
+                        $$ = ccmmc_ast_new_decl(CCMMC_KIND_DECL_FUNCTION);
+                        CcmmcAst *param_list = ccmmc_ast_new(
+                            CCMMC_AST_NODE_PARAM_LIST);
+                        ccmmc_ast_append_child(param_list, $4);
+                        ccmmc_ast_append_children($$, 4, $1,
+                            ccmmc_ast_new_id($2, CCMMC_KIND_ID_NORMAL),
+                            param_list, $7);
                     }
                 | VOID ID DL_LPAREN param_list DL_RPAREN DL_LBRACE block DL_RBRACE
                     {
-                        $$ = makeDeclNode(FUNCTION_DECL);
-                        AST_NODE* parameterList = Allocate(PARAM_LIST_NODE);
-                        makeChild(parameterList, $4);
-                        makeFamily($$, 4, makeIDNode("void", NORMAL_ID), makeIDNode($2, NORMAL_ID), parameterList, $7);
+                        $$ = ccmmc_ast_new_decl(CCMMC_KIND_DECL_FUNCTION);
+                        CcmmcAst *param_list = ccmmc_ast_new(
+                            CCMMC_AST_NODE_PARAM_LIST);
+                        ccmmc_ast_append_child(param_list, $4);
+                        ccmmc_ast_append_children($$, 4,
+                            ccmmc_ast_new_id("void", CCMMC_KIND_ID_NORMAL),
+                            ccmmc_ast_new_id($2, CCMMC_KIND_ID_NORMAL),
+                            param_list, $7);
                     }
                 | type ID DL_LPAREN  DL_RPAREN DL_LBRACE block DL_RBRACE
                     {
-                        $$ = makeDeclNode(FUNCTION_DECL);
-                        AST_NODE* emptyParameterList = Allocate(PARAM_LIST_NODE);
-                        makeFamily($$, 4, $1, makeIDNode($2, NORMAL_ID), emptyParameterList, $6);
+                        $$ = ccmmc_ast_new_decl(CCMMC_KIND_DECL_FUNCTION);
+                        CcmmcAst *empty_param_list = ccmmc_ast_new(
+                            CCMMC_AST_NODE_PARAM_LIST);
+                        ccmmc_ast_append_children($$, 4, $1,
+                            ccmmc_ast_new_id($2, CCMMC_KIND_ID_NORMAL),
+                            empty_param_list, $6);
                     }
                 | VOID ID DL_LPAREN  DL_RPAREN DL_LBRACE block DL_RBRACE
                     {
-                        $$ = makeDeclNode(FUNCTION_DECL);
-                        AST_NODE* emptyParameterList = Allocate(PARAM_LIST_NODE);
-                        makeFamily($$, 4, makeIDNode("void", NORMAL_ID), makeIDNode($2, NORMAL_ID), emptyParameterList, $6);
+                        $$ = ccmmc_ast_new_decl(CCMMC_KIND_DECL_FUNCTION);
+                        CcmmcAst *empty_param_list = ccmmc_ast_new(
+                            CCMMC_AST_NODE_PARAM_LIST);
+                        ccmmc_ast_append_children($$, 4,
+                            ccmmc_ast_new_id("void", CCMMC_KIND_ID_NORMAL),
+                            ccmmc_ast_new_id($2, CCMMC_KIND_ID_NORMAL),
+                            empty_param_list, $6);
                     }
                 ;
 
 param_list  : param_list DL_COMMA  param
                 {
-                    $$ = makeSibling($1, $3);
+                    $$ = ccmmc_ast_append_sibling($1, $3);
                 }
             | param
                 {
@@ -160,13 +175,16 @@ param_list  : param_list DL_COMMA  param
 
 param       : type ID
                 {
-                    $$ = makeDeclNode(FUNCTION_PARAMETER_DECL);
-                    makeFamily($$, 2, $1, makeIDNode($2, NORMAL_ID));
+                    $$ = ccmmc_ast_new_decl(CCMMC_KIND_DECL_FUNCTION_PARAMETER);
+                    ccmmc_ast_append_children($$, 2, $1,
+                        ccmmc_ast_new_id($2, CCMMC_KIND_ID_NORMAL));
                 }
             | type ID dim_fn
                 {
-                    $$ = makeDeclNode(FUNCTION_PARAMETER_DECL);
-                    makeFamily($$, 2, $1, makeChild(makeIDNode($2, ARRAY_ID), $3));
+                    $$ = ccmmc_ast_new_decl(CCMMC_KIND_DECL_FUNCTION_PARAMETER);
+                    ccmmc_ast_append_children($$, 2, $1,
+                        ccmmc_ast_append_child(
+                            ccmmc_ast_new_id($2, CCMMC_KIND_ID_ARRAY), $3));
                 }
             ;
 
@@ -176,7 +194,7 @@ dim_fn      : DL_LBRACK expr_null DL_RBRACK
                 }
             | dim_fn DL_LBRACK expr DL_RBRACK
                 {
-                    $$ = makeSibling($1, $3);
+                    $$ = ccmmc_ast_append_sibling($1, $3);
                 }
             ;
 
@@ -186,33 +204,41 @@ expr_null   :expr
                 }
             |
                 {
-                    $$ = Allocate(NUL_NODE);
+                    $$ = ccmmc_ast_new(CCMMC_AST_NODE_NUL);
                 }
             ;
 
 block       : decl_list stmt_list
                 {
-                    $$ = Allocate(BLOCK_NODE);
-                    makeFamily($$, 2, makeChild(Allocate(VARIABLE_DECL_LIST_NODE), $1), makeChild(Allocate(STMT_LIST_NODE), $2));
+                    $$ = ccmmc_ast_new(CCMMC_AST_NODE_BLOCK);
+                    ccmmc_ast_append_children($$, 2,
+                        ccmmc_ast_append_child(
+                            ccmmc_ast_new(CCMMC_AST_NODE_VARIABLE_DECL_LIST), $1),
+                        ccmmc_ast_append_child(
+                            ccmmc_ast_new(CCMMC_AST_NODE_STMT_LIST), $2));
                 }
             | stmt_list
                 {
-                    $$ = Allocate(BLOCK_NODE);
-                    makeChild($$, makeChild(Allocate(STMT_LIST_NODE), $1));
+                    $$ = ccmmc_ast_new(CCMMC_AST_NODE_BLOCK);
+                    ccmmc_ast_append_child($$,
+                        ccmmc_ast_append_child(
+                            ccmmc_ast_new(CCMMC_AST_NODE_STMT_LIST), $1));
                 }
             | decl_list
                 {
-                    $$ = Allocate(BLOCK_NODE);
-                    makeChild($$, makeChild(Allocate(VARIABLE_DECL_LIST_NODE), $1));
+                    $$ = ccmmc_ast_new(CCMMC_AST_NODE_BLOCK);
+                    ccmmc_ast_append_child($$,
+                        ccmmc_ast_append_child(
+                            ccmmc_ast_new(CCMMC_AST_NODE_VARIABLE_DECL_LIST), $1));
                 }
             |   {
-                    $$ = Allocate(BLOCK_NODE);
+                    $$ = ccmmc_ast_new(CCMMC_AST_NODE_BLOCK);
                 }
             ;
 
 decl_list   : decl_list decl
                 {
-                    $$ = makeSibling($1, $2);
+                    $$ = ccmmc_ast_append_sibling($1, $2);
                 }
             | decl
                 {
@@ -232,53 +258,53 @@ decl        : type_decl
 
 type_decl   : TYPEDEF type id_list DL_SEMICOL
                 {
-                    $$ = makeDeclNode(TYPE_DECL);
-                    makeFamily($$, 2, $2, $3);
+                    $$ = ccmmc_ast_new_decl(CCMMC_KIND_DECL_TYPE);
+                    ccmmc_ast_append_children($$, 2, $2, $3);
                 }
             | TYPEDEF VOID id_list DL_SEMICOL
                 {
-                    $$ = makeDeclNode(TYPE_DECL);
-                    makeFamily($$, 2, makeIDNode("void", NORMAL_ID), $3);
+                    $$ = ccmmc_ast_new_decl(CCMMC_KIND_DECL_TYPE);
+                    ccmmc_ast_append_children($$, 2, ccmmc_ast_new_id("void", CCMMC_KIND_ID_NORMAL), $3);
                 }
             ;
 
 var_decl    : type init_id_list DL_SEMICOL
                 {
-                    $$ = makeDeclNode(VARIABLE_DECL);
-                    makeFamily($$, 2, $1, $2);
+                    $$ = ccmmc_ast_new_decl(CCMMC_KIND_DECL_VARIABLE);
+                    ccmmc_ast_append_children($$, 2, $1, $2);
                 }
             | ID id_list DL_SEMICOL
                 {
-                    $$ = makeDeclNode(VARIABLE_DECL);
-                    makeFamily($$, 2, makeIDNode($1, NORMAL_ID), $2);
+                    $$ = ccmmc_ast_new_decl(CCMMC_KIND_DECL_VARIABLE);
+                    ccmmc_ast_append_children($$, 2, ccmmc_ast_new_id($1, CCMMC_KIND_ID_NORMAL), $2);
                 }
             ;
 
 type        : INT
                 {
-                    $$ = makeIDNode("int", NORMAL_ID);
+                    $$ = ccmmc_ast_new_id("int", CCMMC_KIND_ID_NORMAL);
                 }
             | FLOAT
                 {
-                    $$ = makeIDNode("float", NORMAL_ID);
+                    $$ = ccmmc_ast_new_id("float", CCMMC_KIND_ID_NORMAL);
                 }
             ;
 
 id_list     : ID
                 {
-                    $$ = makeIDNode($1, NORMAL_ID);
+                    $$ = ccmmc_ast_new_id($1, CCMMC_KIND_ID_NORMAL);
                 }
             | id_list DL_COMMA ID
                 {
-                    $$ = makeSibling($1, makeIDNode($3, NORMAL_ID));
+                    $$ = ccmmc_ast_append_sibling($1, ccmmc_ast_new_id($3, CCMMC_KIND_ID_NORMAL));
                 }
             | id_list DL_COMMA ID dim_decl
                 {
-                    $$ = makeSibling($1, makeChild(makeIDNode($3, ARRAY_ID), $4));
+                    $$ = ccmmc_ast_append_sibling($1, ccmmc_ast_append_child(ccmmc_ast_new_id($3, CCMMC_KIND_ID_ARRAY), $4));
                 }
             | ID dim_decl
                 {
-                    $$ = makeChild(makeIDNode($1, ARRAY_ID), $2);
+                    $$ = ccmmc_ast_append_child(ccmmc_ast_new_id($1, CCMMC_KIND_ID_ARRAY), $2);
                 }
             ;
 
@@ -288,19 +314,19 @@ dim_decl    : DL_LBRACK cexpr DL_RBRACK
                 }
             | dim_decl DL_LBRACK cexpr DL_RBRACK
                 {
-                    $$ = makeSibling($1, $3);
+                    $$ = ccmmc_ast_append_sibling($1, $3);
                 }
             ;
 
 cexpr       : cexpr OP_ADD mcexpr
                 {
-                    $$ = makeExprNode(BINARY_OPERATION, BINARY_OP_ADD);
-                    makeFamily($$, 2, $1, $3);
+                    $$ = ccmmc_ast_new_expr(CCMMC_KIND_EXPR_BINARY_OP, CCMMC_KIND_OP_BINARY_ADD);
+                    ccmmc_ast_append_children($$, 2, $1, $3);
                 } /* This is for array declarations */
             | cexpr OP_SUB mcexpr
                 {
-                    $$ = makeExprNode(BINARY_OPERATION, BINARY_OP_SUB);
-                    makeFamily($$, 2, $1, $3);
+                    $$ = ccmmc_ast_new_expr(CCMMC_KIND_EXPR_BINARY_OP, CCMMC_KIND_OP_BINARY_SUB);
+                    ccmmc_ast_append_children($$, 2, $1, $3);
                 }
             | mcexpr
                 {
@@ -310,13 +336,13 @@ cexpr       : cexpr OP_ADD mcexpr
 
 mcexpr      : mcexpr OP_MUL cfactor
                 {
-                    $$ = makeExprNode(BINARY_OPERATION, BINARY_OP_MUL);
-                    makeFamily($$, 2, $1, $3);
+                    $$ = ccmmc_ast_new_expr(CCMMC_KIND_EXPR_BINARY_OP, CCMMC_KIND_OP_BINARY_MUL);
+                    ccmmc_ast_append_children($$, 2, $1, $3);
                 }
             | mcexpr OP_DIV cfactor
                 {
-                    $$ = makeExprNode(BINARY_OPERATION, BINARY_OP_DIV);
-                    makeFamily($$, 2, $1, $3);
+                    $$ = ccmmc_ast_new_expr(CCMMC_KIND_EXPR_BINARY_OP, CCMMC_KIND_OP_BINARY_DIV);
+                    ccmmc_ast_append_children($$, 2, $1, $3);
                 }
             | cfactor
                 {
@@ -326,8 +352,8 @@ mcexpr      : mcexpr OP_MUL cfactor
 
 cfactor:    CONST
                 {
-                    $$ = Allocate(CONST_VALUE_NODE);
-                    $$->semantic_value.const1=$1;
+                    $$ = ccmmc_ast_new(CCMMC_AST_NODE_CONST_VALUE);
+                    $$->value_const = $1;
                 }
             | DL_LPAREN cexpr DL_RPAREN
                 {
@@ -341,28 +367,29 @@ init_id_list: init_id
                 }
             | init_id_list DL_COMMA init_id
                 {
-                    $$ = makeSibling($1, $3);
+                    $$ = ccmmc_ast_append_sibling($1, $3);
                 }
             ;
 
 init_id     : ID
                 {
-                    $$ = makeIDNode($1, NORMAL_ID);
+                    $$ = ccmmc_ast_new_id($1, CCMMC_KIND_ID_NORMAL);
                 }
             | ID dim_decl
                 {
-                    $$ = makeChild(makeIDNode($1, ARRAY_ID), $2);
+                    $$ = ccmmc_ast_append_child(
+                        ccmmc_ast_new_id($1, CCMMC_KIND_ID_ARRAY), $2);
                 }
             | ID OP_ASSIGN relop_expr
                 {
-                    $$ = makeIDNode($1, WITH_INIT_ID);
-                    makeChild($$, $3);
+                    $$ = ccmmc_ast_new_id($1, CCMMC_KIND_ID_WITH_INIT);
+                    ccmmc_ast_append_child($$, $3);
                 }
             ;
 
 stmt_list   : stmt_list stmt
                 {
-                    $$ = makeSibling($1, $2);
+                    $$ = ccmmc_ast_append_sibling($1, $2);
                 }
             | stmt
                 {
@@ -376,63 +403,66 @@ stmt        : DL_LBRACE block DL_RBRACE
                 }
             | WHILE DL_LPAREN relop_expr DL_RPAREN stmt
                 {
-                    $$ = makeStmtNode(WHILE_STMT);
-                    makeFamily($$, 2, $3, $5);
+                    $$ = ccmmc_ast_new_stmt(CCMMC_KIND_STMT_WHILE);
+                    ccmmc_ast_append_children($$, 2, $3, $5);
                 }
             | FOR DL_LPAREN assign_expr_list DL_SEMICOL relop_expr_list DL_SEMICOL assign_expr_list DL_RPAREN stmt
                 {
-                    $$ = makeStmtNode(FOR_STMT);
-                    makeFamily($$, 4, $3, $5, $7, $9);
+                    $$ = ccmmc_ast_new_stmt(CCMMC_KIND_STMT_FOR);
+                    ccmmc_ast_append_children($$, 4, $3, $5, $7, $9);
                 }
             | var_ref OP_ASSIGN relop_expr DL_SEMICOL
                 {
-                    $$ = makeStmtNode(ASSIGN_STMT);
-                    makeFamily($$, 2, $1, $3);
+                    $$ = ccmmc_ast_new_stmt(CCMMC_KIND_STMT_ASSIGN);
+                    ccmmc_ast_append_children($$, 2, $1, $3);
                 }
             | IF DL_LPAREN relop_expr DL_RPAREN stmt
                 {
-                    $$ = makeStmtNode(IF_STMT);
-                    makeFamily($$, 3, $3, $5, Allocate(NUL_NODE));
+                    $$ = ccmmc_ast_new_stmt(CCMMC_KIND_STMT_IF);
+                    ccmmc_ast_append_children($$, 3, $3, $5,
+                        ccmmc_ast_new(CCMMC_AST_NODE_NUL));
                 }
             | IF DL_LPAREN relop_expr DL_RPAREN stmt ELSE stmt
                 {
-                    $$ = makeStmtNode(IF_STMT);
-                    makeFamily($$, 3, $3, $5, $7);
+                    $$ = ccmmc_ast_new_stmt(CCMMC_KIND_STMT_IF);
+                    ccmmc_ast_append_children($$, 3, $3, $5, $7);
                 }
             | ID DL_LPAREN relop_expr_list DL_RPAREN DL_SEMICOL
                 {
-                    $$ = makeStmtNode(FUNCTION_CALL_STMT);
-                    makeFamily($$, 2, makeIDNode($1, NORMAL_ID), $3);
+                    $$ = ccmmc_ast_new_stmt(CCMMC_KIND_STMT_FUNCTION_CALL);
+                    ccmmc_ast_append_children($$, 2,
+                        ccmmc_ast_new_id($1, CCMMC_KIND_ID_NORMAL), $3);
                 }
             | DL_SEMICOL
                 {
-                    $$ = Allocate(NUL_NODE);
+                    $$ = ccmmc_ast_new(CCMMC_AST_NODE_NUL);
                 }
             | RETURN DL_SEMICOL
                 {
-                    $$ = makeStmtNode(RETURN_STMT);
+                    $$ = ccmmc_ast_new_stmt(CCMMC_KIND_STMT_RETURN);
                 }
             | RETURN relop_expr DL_SEMICOL
                 {
-                    $$ = makeStmtNode(RETURN_STMT);
-                    makeChild($$, $2);
+                    $$ = ccmmc_ast_new_stmt(CCMMC_KIND_STMT_RETURN);
+                    ccmmc_ast_append_child($$, $2);
                 }
             ;
 
 assign_expr_list: nonempty_assign_expr_list
                     {
-                        $$ = Allocate(NONEMPTY_ASSIGN_EXPR_LIST_NODE);
-                        makeChild($$, $1);
+                        $$ = ccmmc_ast_new(
+                            CCMMC_AST_NODE_NONEMPTY_ASSIGN_EXPR_LIST);
+                        ccmmc_ast_append_child($$, $1);
                     }
                 |
                     {
-                        $$ = Allocate(NUL_NODE);
+                        $$ = ccmmc_ast_new(CCMMC_AST_NODE_NUL);
                     }
                 ;
 
 nonempty_assign_expr_list   : nonempty_assign_expr_list DL_COMMA assign_expr
                                {
-                                   $$ = makeSibling($1, $3);
+                                   $$ = ccmmc_ast_append_sibling($1, $3);
                                }
                             | assign_expr
                                {
@@ -442,8 +472,9 @@ nonempty_assign_expr_list   : nonempty_assign_expr_list DL_COMMA assign_expr
 
 assign_expr     : ID OP_ASSIGN relop_expr
                     {
-                        $$ = makeStmtNode(ASSIGN_STMT);
-                        makeFamily($$, 2, makeIDNode($1, NORMAL_ID), $3);
+                        $$ = ccmmc_ast_new_stmt(CCMMC_KIND_STMT_ASSIGN);
+                        ccmmc_ast_append_children($$, 2,
+                            ccmmc_ast_new_id($1, CCMMC_KIND_ID_NORMAL), $3);
                     }
                 | relop_expr
                     {
@@ -457,8 +488,9 @@ relop_expr      : relop_term
                     }
                 | relop_expr OP_OR relop_term
                     {
-                        $$ = makeExprNode(BINARY_OPERATION, BINARY_OP_OR);
-                        makeFamily($$, 2, $1, $3);
+                        $$ = ccmmc_ast_new_expr(
+                            CCMMC_KIND_EXPR_BINARY_OP, CCMMC_KIND_OP_BINARY_OR);
+                        ccmmc_ast_append_children($$, 2, $1, $3);
                     }
                 ;
 
@@ -468,8 +500,9 @@ relop_term      : relop_factor
                     }
                 | relop_term OP_AND relop_factor
                     {
-                        $$ = makeExprNode(BINARY_OPERATION, BINARY_OP_AND);
-                        makeFamily($$, 2, $1, $3);
+                        $$ = ccmmc_ast_new_expr(
+                            CCMMC_KIND_EXPR_BINARY_OP, CCMMC_KIND_OP_BINARY_AND);
+                        ccmmc_ast_append_children($$, 2, $1, $3);
                     }
                 ;
 
@@ -480,51 +513,58 @@ relop_factor    : expr
                 | expr rel_op expr
                     {
                         $$ = $2;
-                        makeFamily($$, 2, $1, $3);
+                        ccmmc_ast_append_children($$, 2, $1, $3);
                     }
                 ;
 
 rel_op          : OP_EQ
                     {
-                        $$ = makeExprNode(BINARY_OPERATION, BINARY_OP_EQ);
+                        $$ = ccmmc_ast_new_expr(
+                            CCMMC_KIND_EXPR_BINARY_OP, CCMMC_KIND_OP_BINARY_EQ);
                     }
                 | OP_GE
                     {
-                        $$ = makeExprNode(BINARY_OPERATION, BINARY_OP_GE);
+                        $$ = ccmmc_ast_new_expr(
+                            CCMMC_KIND_EXPR_BINARY_OP, CCMMC_KIND_OP_BINARY_GE);
                     }
                 | OP_LE
                     {
-                        $$ = makeExprNode(BINARY_OPERATION, BINARY_OP_LE);
+                        $$ = ccmmc_ast_new_expr(
+                            CCMMC_KIND_EXPR_BINARY_OP, CCMMC_KIND_OP_BINARY_LE);
                     }
                 | OP_NE
                     {
-                        $$ = makeExprNode(BINARY_OPERATION, BINARY_OP_NE);
+                        $$ = ccmmc_ast_new_expr(
+                            CCMMC_KIND_EXPR_BINARY_OP, CCMMC_KIND_OP_BINARY_NE);
                     }
                 | OP_GT
                     {
-                        $$ = makeExprNode(BINARY_OPERATION, BINARY_OP_GT);
+                        $$ = ccmmc_ast_new_expr(
+                            CCMMC_KIND_EXPR_BINARY_OP, CCMMC_KIND_OP_BINARY_GT);
                     }
                 | OP_LT
                     {
-                        $$ = makeExprNode(BINARY_OPERATION, BINARY_OP_LT);
+                        $$ = ccmmc_ast_new_expr(
+                            CCMMC_KIND_EXPR_BINARY_OP, CCMMC_KIND_OP_BINARY_LT);
                     }
                 ;
 
 
 relop_expr_list : nonempty_relop_expr_list
                     {
-                        $$ = Allocate(NONEMPTY_RELOP_EXPR_LIST_NODE);
-                        makeChild($$, $1);
+                        $$ = ccmmc_ast_new(
+                            CCMMC_AST_NODE_NONEMPTY_RELOP_EXPR_LIST);
+                        ccmmc_ast_append_child($$, $1);
                     }
                 |
                     {
-                        $$ = Allocate(NUL_NODE);
+                        $$ = ccmmc_ast_new(CCMMC_AST_NODE_NUL);
                     }
                 ;
 
 nonempty_relop_expr_list: nonempty_relop_expr_list DL_COMMA relop_expr
                             {
-                                $$ = makeSibling($1, $3);
+                                $$ = ccmmc_ast_append_sibling($1, $3);
                             }
                         | relop_expr
                             {
@@ -535,7 +575,7 @@ nonempty_relop_expr_list: nonempty_relop_expr_list DL_COMMA relop_expr
 expr        : expr add_op term
                 {
                     $$ = $2;
-                    makeFamily($$, 2, $1, $3);
+                    ccmmc_ast_append_children($$, 2, $1, $3);
                 }
             | term
                 {
@@ -545,18 +585,20 @@ expr        : expr add_op term
 
 add_op      : OP_ADD
                 {
-                    $$ = makeExprNode(BINARY_OPERATION, BINARY_OP_ADD);
+                    $$ = ccmmc_ast_new_expr(
+                        CCMMC_KIND_EXPR_BINARY_OP, CCMMC_KIND_OP_BINARY_ADD);
                 }
             | OP_SUB
                 {
-                    $$ = makeExprNode(BINARY_OPERATION, BINARY_OP_SUB);
+                    $$ = ccmmc_ast_new_expr(
+                        CCMMC_KIND_EXPR_BINARY_OP, CCMMC_KIND_OP_BINARY_SUB);
                 }
             ;
 
 term        : term mul_op factor
                 {
                     $$ = $2;
-                    makeFamily($$, 2, $1, $3);
+                    ccmmc_ast_append_children($$, 2, $1, $3);
                 }
             | factor
                 {
@@ -566,11 +608,13 @@ term        : term mul_op factor
 
 mul_op      : OP_MUL
                 {
-                    $$ = makeExprNode(BINARY_OPERATION, BINARY_OP_MUL);
+                    $$ = ccmmc_ast_new_expr(
+                        CCMMC_KIND_EXPR_BINARY_OP, CCMMC_KIND_OP_BINARY_MUL);
                 }
             | OP_DIV
                 {
-                    $$ = makeExprNode(BINARY_OPERATION, BINARY_OP_DIV);
+                    $$ = ccmmc_ast_new_expr(
+                        CCMMC_KIND_EXPR_BINARY_OP, CCMMC_KIND_OP_BINARY_DIV);
                 }
             ;
 
@@ -580,70 +624,87 @@ factor      : DL_LPAREN relop_expr DL_RPAREN
                 }
             | OP_ADD DL_LPAREN relop_expr DL_RPAREN
                 {
-                    $$ = makeExprNode(UNARY_OPERATION, UNARY_OP_POSITIVE);
-                    makeChild($$, $3);
+                    $$ = ccmmc_ast_new_expr(
+                        CCMMC_KIND_EXPR_UNARY_OP, CCMMC_KIND_OP_UNARY_POSITIVE);
+                    ccmmc_ast_append_child($$, $3);
                 }
             | OP_SUB DL_LPAREN relop_expr DL_RPAREN
                 {
-                    $$ = makeExprNode(UNARY_OPERATION, UNARY_OP_NEGATIVE);
-                    makeChild($$, $3);
+                    $$ = ccmmc_ast_new_expr(
+                        CCMMC_KIND_EXPR_UNARY_OP, CCMMC_KIND_OP_UNARY_NEGATIVE);
+                    ccmmc_ast_append_child($$, $3);
                 }
             | OP_NOT DL_LPAREN relop_expr DL_RPAREN
                 {
-                    $$ = makeExprNode(UNARY_OPERATION, UNARY_OP_LOGICAL_NEGATION);
-                    makeChild($$, $3);
+                    $$ = ccmmc_ast_new_expr(
+                        CCMMC_KIND_EXPR_UNARY_OP, CCMMC_KIND_OP_UNARY_LOGICAL_NEGATION);
+                    ccmmc_ast_append_child($$, $3);
                 }
             | CONST
                 {
-                    $$ = Allocate(CONST_VALUE_NODE);
-                    $$->semantic_value.const1=$1;
+                    $$ = ccmmc_ast_new(CCMMC_AST_NODE_CONST_VALUE);
+                    $$->value_const = $1;
                 }
             | OP_ADD CONST
                 {
-                    $$ = makeExprNode(UNARY_OPERATION, UNARY_OP_POSITIVE);
-                    AST_NODE *const_node = Allocate(CONST_VALUE_NODE);
-                    const_node->semantic_value.const1 = $2;
-                    makeChild($$, const_node);
+                    $$ = ccmmc_ast_new_expr(
+                        CCMMC_KIND_EXPR_UNARY_OP, CCMMC_KIND_OP_UNARY_POSITIVE);
+                    CcmmcAst *const_node = ccmmc_ast_new(CCMMC_AST_NODE_CONST_VALUE);
+                    const_node->value_const = $2;
+                    ccmmc_ast_append_child($$, const_node);
                 }
             | OP_SUB CONST
                 {
-                    $$ = makeExprNode(UNARY_OPERATION, UNARY_OP_NEGATIVE);
-                    AST_NODE *const_node = Allocate(CONST_VALUE_NODE);
-                    const_node->semantic_value.const1 = $2;
-                    makeChild($$, const_node);
+                    $$ = ccmmc_ast_new_expr(
+                        CCMMC_KIND_EXPR_UNARY_OP, CCMMC_KIND_OP_UNARY_NEGATIVE);
+                    CcmmcAst *const_node = ccmmc_ast_new(CCMMC_AST_NODE_CONST_VALUE);
+                    const_node->value_const = $2;
+                    ccmmc_ast_append_child($$, const_node);
                 }
             | OP_NOT CONST
                 {
-                    $$ = makeExprNode(UNARY_OPERATION, UNARY_OP_LOGICAL_NEGATION);
-                    AST_NODE *const_node = Allocate(CONST_VALUE_NODE);
-                    const_node->semantic_value.const1 = $2;
-                    makeChild($$, const_node);
+                    $$ = ccmmc_ast_new_expr(
+                        CCMMC_KIND_EXPR_UNARY_OP, CCMMC_KIND_OP_UNARY_LOGICAL_NEGATION);
+                    CcmmcAst *const_node = ccmmc_ast_new(CCMMC_AST_NODE_CONST_VALUE);
+                    const_node->value_const = $2;
+                    ccmmc_ast_append_child($$, const_node);
                 }
             | ID DL_LPAREN relop_expr_list DL_RPAREN
                 {
-                    $$ = makeStmtNode(FUNCTION_CALL_STMT);
-                    makeFamily($$, 2, makeIDNode($1, NORMAL_ID), $3);
+                    $$ = ccmmc_ast_new_stmt(
+                        CCMMC_KIND_STMT_FUNCTION_CALL);
+                    ccmmc_ast_append_children($$, 2,
+                        ccmmc_ast_new_id($1, CCMMC_KIND_ID_NORMAL), $3);
                 }
             | OP_ADD ID DL_LPAREN relop_expr_list DL_RPAREN
                 {
-                    $$ = makeExprNode(UNARY_OPERATION, UNARY_OP_POSITIVE);
-                    AST_NODE *func_node = makeStmtNode(FUNCTION_CALL_STMT);
-                    makeFamily(func_node, 2, makeIDNode($2, NORMAL_ID), $4);
-                    makeChild($$, func_node);
+                    $$ = ccmmc_ast_new_expr(
+                        CCMMC_KIND_EXPR_UNARY_OP, CCMMC_KIND_OP_UNARY_POSITIVE);
+                    CcmmcAst *func_node = ccmmc_ast_new_stmt(
+                        CCMMC_KIND_STMT_FUNCTION_CALL);
+                    ccmmc_ast_append_children(func_node, 2,
+                        ccmmc_ast_new_id($2, CCMMC_KIND_ID_NORMAL), $4);
+                    ccmmc_ast_append_child($$, func_node);
                 }
             | OP_SUB ID DL_LPAREN relop_expr_list DL_RPAREN
                 {
-                    $$ = makeExprNode(UNARY_OPERATION, UNARY_OP_NEGATIVE);
-                    AST_NODE *func_node = makeStmtNode(FUNCTION_CALL_STMT);
-                    makeFamily(func_node, 2, makeIDNode($2, NORMAL_ID), $4);
-                    makeChild($$, func_node);
+                    $$ = ccmmc_ast_new_expr(
+                        CCMMC_KIND_EXPR_UNARY_OP, CCMMC_KIND_OP_UNARY_NEGATIVE);
+                    CcmmcAst *func_node = ccmmc_ast_new_stmt(
+                        CCMMC_KIND_STMT_FUNCTION_CALL);
+                    ccmmc_ast_append_children(func_node, 2,
+                        ccmmc_ast_new_id($2, CCMMC_KIND_ID_NORMAL), $4);
+                    ccmmc_ast_append_child($$, func_node);
                 }
             | OP_NOT ID DL_LPAREN relop_expr_list DL_RPAREN
                 {
-                    $$ = makeExprNode(UNARY_OPERATION, UNARY_OP_LOGICAL_NEGATION);
-                    AST_NODE *func_node = makeStmtNode(FUNCTION_CALL_STMT);
-                    makeFamily(func_node, 2, makeIDNode($2, NORMAL_ID), $4);
-                    makeChild($$, func_node);
+                    $$ = ccmmc_ast_new_expr(
+                        CCMMC_KIND_EXPR_UNARY_OP, CCMMC_KIND_OP_UNARY_LOGICAL_NEGATION);
+                    CcmmcAst *func_node = ccmmc_ast_new_stmt(
+                        CCMMC_KIND_STMT_FUNCTION_CALL);
+                    ccmmc_ast_append_children(func_node, 2,
+                        ccmmc_ast_new_id($2, CCMMC_KIND_ID_NORMAL), $4);
+                    ccmmc_ast_append_child($$, func_node);
                 }
             | var_ref
                 {
@@ -651,36 +712,39 @@ factor      : DL_LPAREN relop_expr DL_RPAREN
                 }
             | OP_ADD var_ref
                 {
-                    $$ = makeExprNode(UNARY_OPERATION, UNARY_OP_POSITIVE);
-                    makeChild($$, $2);
+                    $$ = ccmmc_ast_new_expr(
+                        CCMMC_KIND_EXPR_UNARY_OP, CCMMC_KIND_OP_UNARY_POSITIVE);
+                    ccmmc_ast_append_child($$, $2);
                 }
             | OP_SUB var_ref
                 {
-                    $$ = makeExprNode(UNARY_OPERATION, UNARY_OP_NEGATIVE);
-                    makeChild($$, $2);
+                    $$ = ccmmc_ast_new_expr(
+                        CCMMC_KIND_EXPR_UNARY_OP, CCMMC_KIND_OP_UNARY_NEGATIVE);
+                    ccmmc_ast_append_child($$, $2);
                 }
             | OP_NOT var_ref
                 {
-                    $$ = makeExprNode(UNARY_OPERATION, UNARY_OP_LOGICAL_NEGATION);
-                    makeChild($$, $2);
+                    $$ = ccmmc_ast_new_expr(
+                        CCMMC_KIND_EXPR_UNARY_OP, CCMMC_KIND_OP_UNARY_LOGICAL_NEGATION);
+                    ccmmc_ast_append_child($$, $2);
                 }
             ;
 
 var_ref     : ID
                 {
-                    $$ = makeIDNode($1, NORMAL_ID);
+                    $$ = ccmmc_ast_new_id($1, CCMMC_KIND_ID_NORMAL);
                 }
             | ID dim_list
                 {
-                    $$ = makeIDNode($1, ARRAY_ID);
-                    makeChild($$, $2);
+                    $$ = ccmmc_ast_new_id($1, CCMMC_KIND_ID_ARRAY);
+                    ccmmc_ast_append_child($$, $2);
                 }
             ;
 
 
 dim_list    : dim_list DL_LBRACK expr DL_RBRACK
                 {
-                    $$ = makeSibling($1, $3);
+                    $$ = ccmmc_ast_append_sibling($1, $3);
                 }
             | DL_LBRACK expr DL_RBRACK
                 {
