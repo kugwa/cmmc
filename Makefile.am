@@ -17,6 +17,8 @@ parser_SOURCES =		\
 	src/ast.c		\
 	src/draw.h		\
 	src/draw.c		\
+	src/semantic-analysis.h	\
+	src/semantic-analysis.c	\
 	src/state.h		\
 	src/state.c		\
 	src/symbol-table.h	\

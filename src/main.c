@@ -7,6 +7,7 @@ typedef void* yyscan_t;
 #include "ast.h"
 #include "common.h"
 #include "draw.h"
+#include "semantic-analysis.h"
 #include "state.h"
 
 #include "libparser_a-parser.h"
@@ -66,6 +67,14 @@ int main (int argc, char **argv)
     const char *dump_ast = getenv("CCMMC_DUMP_AST");
     if (dump_ast != NULL && *dump_ast != '\0')
         ccmmc_draw_ast(stdout, source_name, state->ast);
+
+    CcmmcSymbolTable table_struct;
+    state->table = &table_struct;
+    ccmmc_symbol_table_init(state->table);
+    if (ccmmc_semantic_check(state->ast, state->table))
+        puts("Parsing completed. No errors found.");
+    else
+        exit(1);
 
     ccmmc_state_fini(state);
     fclose(source_handle);
