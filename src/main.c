@@ -63,7 +63,9 @@ int main (int argc, char **argv)
     ccmmc_parser_lex_destroy(scanner);
 
     // Dump the AST
-    ccmmc_draw_ast(stdout, source_name, state->ast);
+    const char *dump_ast = getenv("CCMMC_DUMP_AST");
+    if (dump_ast != NULL && *dump_ast != '\0')
+        ccmmc_draw_ast(stdout, source_name, state->ast);
 
     ccmmc_state_fini(state);
     fclose(source_handle);
