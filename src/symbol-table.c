@@ -2,89 +2,84 @@
 # include "config.h"
 #endif
 
+#include "common.h"
 #include "symbol-table.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <ctype.h>
-#include <math.h>
 
-#define TABLE_SIZE    256
-
-static CcmmcSymbol *hash_table[TABLE_SIZE];
-
-static int hash(char *str) {
+static int hash(const char *str)
+{
     int idx = 0;
-    while (*str) {
+    for (; *str; str++) {
         idx = idx << 1;
         idx += *str;
-        str++;
     }
-    return (idx & (TABLE_SIZE-1));
+    return (idx & (CCMMC_SYMBOL_SCOPE_HASH_TABLE_SIZE - 1));
 }
 
-/* returns the symbol table entry if found else NULL */
-CcmmcSymbol *ccmmc_symbol_table_lookup(char *name) {
-    int hash_key;
-    CcmmcSymbol *symptr;
-    if (!name)
-        return NULL;
-    hash_key = hash(name);
-    symptr = hash_table[hash_key];
-
-    while (symptr) {
-        if (!(strcmp(name, symptr->lexeme)))
-            return symptr;
-        symptr = symptr->front;
-    }
-    return NULL;
+void ccmmc_symbol_table_init(CcmmcSymbolTable *table)
+{
+    table->all = NULL;
+    table->all_last = NULL;
+    table->current = NULL;
 }
 
-
-void ccmmc_symbol_table_insert_id(char *name, int line_number) {
-    int hash_key;
-    CcmmcSymbol *ptr;
-    CcmmcSymbol *symptr = malloc(sizeof(CcmmcSymbol));
-
-    hash_key = hash(name);
-    ptr = hash_table[hash_key];
-
-    if (ptr == NULL) {
-        /* first entry for this hash_key */
-        hash_table[hash_key] = symptr;
-        symptr->front = NULL;
-        symptr->back = symptr;
+// push a scope on the stack
+void ccmmc_symbol_table_open_scope(CcmmcSymbolTable *table)
+{
+    CcmmcSymbolScope *scope = malloc(sizeof(CcmmcSymbolScope));
+    ERR_FATAL_CHECK(scope, malloc);
+    for (int i = 0; i < CCMMC_SYMBOL_SCOPE_HASH_TABLE_SIZE; i++)
+        scope->hash_table[i] = NULL;
+    if (table->all == NULL) {
+        table->all = scope;
+        table->all_last = scope;
     } else {
-        symptr->front = ptr;
-        ptr->back = symptr;
-        symptr->back = symptr;
-        hash_table[hash_key] = symptr;
+        table->all_last->all_next = scope;
+        table->all_last = scope;
     }
-
-    strcpy(symptr->lexeme, name);
-    symptr->line = line_number;
-    symptr->counter = 1;
+    scope->all_next = NULL;
+    scope->current_next = table->current;
+    table->current = scope;
 }
 
-static void print_symbol(CcmmcSymbol *ptr) {
-    printf(" Name = %s \n", ptr->lexeme);
-    printf(" References = %d \n", ptr->counter);
+// pop a scope from the stack
+void ccmmc_symbol_table_close_scope(CcmmcSymbolTable *table)
+{
+    CcmmcSymbolScope *closing = table->current;
+    table->current = closing->current_next;
 }
 
-void ccmmc_symbol_table_print(void) {
-    puts("----- Symbol Table ---------");
-    for (int i = 0; i < TABLE_SIZE; i++)
-    {
-        CcmmcSymbol *symptr;
-        symptr = hash_table[i];
-        while (symptr != NULL)
-        {
-             printf("====>  index = %d\n", i);
-             print_symbol(symptr);
-             symptr = symptr->front;
+void ccmmc_symbol_table_insert(CcmmcSymbolTable *table,
+    const char *name, CcmmcSymbolKind kind, CcmmcSymbolType type)
+{
+    int key = hash(name);
+    CcmmcSymbol *symbol = malloc(sizeof(CcmmcSymbol));
+    ERR_FATAL_CHECK(symbol, malloc);
+    symbol->kind = kind;
+    symbol->type = type;
+    symbol->attr.addr = 0;
+    symbol->name = name;
+    symbol->next = table->current->hash_table[key];
+    table->current->hash_table[key] = symbol;
+}
+
+CcmmcSymbol *ccmmc_symbol_table_retrive (
+    CcmmcSymbolTable *table, const char *name)
+{
+    if (name == NULL)
+        return NULL;
+
+    int key = hash(name);
+    for (CcmmcSymbolScope *scope = table->current; scope; scope = scope->current_next) {
+        for (CcmmcSymbol *symbol = scope->hash_table[key]; symbol; symbol = symbol->next) {
+            if (strcmp(name, symbol->name) == 0)
+                return symbol;
         }
     }
+    return NULL;
 }
 
 // vim: set sw=4 ts=4 sts=4 et:

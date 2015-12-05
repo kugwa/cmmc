@@ -6,10 +6,8 @@
 # include "config.h"
 #endif
 
-#include "ast.h"
 #include "common.h"
 #include "state.h"
-#include "symbol-table.h"
 
 #include "libparser_a-parser.h"
 
@@ -79,15 +77,6 @@ ERROR           .
                     for (i = 0; i < SIZEOF_ARRAY(reserved); i++)
                         if (strcmp(yytext, reserved[i]) == 0)
                             return reserved_token[i];
-                    if (i == SIZEOF_ARRAY(reserved)) {
-                        CcmmcSymbol *ptr = ccmmc_symbol_table_lookup(yytext);
-                        CcmmcState *state = yyextra;
-                        if (ptr == NULL)
-                            ccmmc_symbol_table_insert_id(
-                                yytext, state->line_number);
-                        else
-                            ptr->counter++;
-                    }
                     yylval->lexeme = strdup(yytext);
                     ERR_FATAL_CHECK(yylval->lexeme, strdup);
                     return ID;
