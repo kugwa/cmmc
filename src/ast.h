@@ -50,7 +50,7 @@ typedef enum CcmmcKindOpBinary_enum {
     CCMMC_KIND_OP_BINARY_LT,
     CCMMC_KIND_OP_BINARY_AND,
     CCMMC_KIND_OP_BINARY_OR
-} CcmmcKindOpBin;
+} CcmmcKindOpBinary;
 
 typedef enum CcmmcKindOpUnary_enum {
     CCMMC_KIND_OP_UNARY_POSITIVE,
@@ -97,7 +97,7 @@ typedef struct CcmmcValueExpr_struct {
         float const_float;
     };
     union {
-        CcmmcKindOpUnary op_binary;
+        CcmmcKindOpBinary op_binary;
         CcmmcKindOpUnary op_unary;
     };
 } CcmmcValueExpr;
