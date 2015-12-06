@@ -71,7 +71,20 @@ int main (int argc, char **argv)
     CcmmcSymbolTable table_struct;
     state->table = &table_struct;
     ccmmc_symbol_table_init(state->table);
-    if (ccmmc_semantic_check(state->ast, state->table))
+
+    bool check_succeeded = ccmmc_semantic_check(state->ast, state->table);
+    const char *dump_symbol = getenv("CCMMC_DUMP_SYMBOL");
+    if (dump_symbol != NULL && *dump_symbol != '\0') {
+        CcmmcSymbolScope *scope = state->table->all;
+        for (unsigned int i = 0; scope != NULL; scope = scope->all_next, i++) {
+            if (i == 0)
+                puts("  * Global Scope *");
+            else
+                printf("  * Scope %u *\n", i);
+            ccmmc_draw_symbol_scope(stdout, scope);
+        }
+    }
+    if (check_succeeded)
         puts("Parsing completed. No errors found.");
     else
         exit(1);
