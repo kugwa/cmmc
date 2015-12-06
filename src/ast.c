@@ -10,7 +10,7 @@
 #include <stdlib.h>
 
 
-CcmmcAst *ccmmc_ast_new(CcmmcAstNodeType type_node)
+CcmmcAst *ccmmc_ast_new(CcmmcAstNodeType type_node, size_t line_number)
 {
     CcmmcAst *node;
     node = malloc(sizeof(CcmmcAst));
@@ -22,6 +22,7 @@ CcmmcAst *ccmmc_ast_new(CcmmcAstNodeType type_node)
     node->right_sibling = NULL;
     node->type_node = type_node;
     node->type_value = CCMMC_AST_VALUE_NONE;
+    node->line_number = line_number;
     return node;
 }
 
@@ -77,32 +78,32 @@ CcmmcAst *ccmmc_ast_append_children(
     return parent;
 }
 
-CcmmcAst *ccmmc_ast_new_id(char *lexeme, CcmmcKindId kind)
+CcmmcAst *ccmmc_ast_new_id(char *lexeme, CcmmcKindId kind, size_t line_number)
 {
-    CcmmcAst *node = ccmmc_ast_new(CCMMC_AST_NODE_ID);
+    CcmmcAst *node = ccmmc_ast_new(CCMMC_AST_NODE_ID, line_number);
     node->value_id.kind = kind;
     node->value_id.name = lexeme;
     // node->value_id.symbolTableEntry = NULL;
     return node;
 }
 
-CcmmcAst *ccmmc_ast_new_stmt(CcmmcKindStmt kind)
+CcmmcAst *ccmmc_ast_new_stmt(CcmmcKindStmt kind, size_t line_number)
 {
-    CcmmcAst *node = ccmmc_ast_new(CCMMC_AST_NODE_STMT);
+    CcmmcAst *node = ccmmc_ast_new(CCMMC_AST_NODE_STMT, line_number);
     node->value_stmt.kind = kind;
     return node;
 }
 
-CcmmcAst *ccmmc_ast_new_decl(CcmmcKindDecl kind)
+CcmmcAst *ccmmc_ast_new_decl(CcmmcKindDecl kind, size_t line_number)
 {
-    CcmmcAst *node = ccmmc_ast_new(CCMMC_AST_NODE_DECL);
+    CcmmcAst *node = ccmmc_ast_new(CCMMC_AST_NODE_DECL, line_number);
     node->value_decl.kind = kind;
     return node;
 }
 
-CcmmcAst *ccmmc_ast_new_expr(CcmmcKindExpr kind, int op_kind)
+CcmmcAst *ccmmc_ast_new_expr(CcmmcKindExpr kind, int op_kind, size_t line_number)
 {
-    CcmmcAst *node = ccmmc_ast_new(CCMMC_AST_NODE_EXPR);
+    CcmmcAst *node = ccmmc_ast_new(CCMMC_AST_NODE_EXPR, line_number);
     node->value_expr.kind = kind;
     node->value_expr.is_const_eval = false;
     if (kind == CCMMC_KIND_EXPR_BINARY_OP)

@@ -93,8 +93,9 @@ static CcmmcValueConst eval_const_expr(CcmmcAst *expr) {
             if (left.kind == CCMMC_KIND_CONST_INT) {
                 if (right.kind == CCMMC_KIND_CONST_INT) {
                     if (right.const_int == 0) {
-                        fprintf(stderr, ERROR("Integer division by zero."), (size_t)0);
-                        // XXX: We should use an invalid type
+                        fprintf(stderr, ERROR("Integer division by zero."),
+                            expr->line_number);
+                        // XXX: We should have an invalid type
                         return (CcmmcValueConst){ .kind = CCMMC_KIND_CONST_STRING };
                     }
                     return (CcmmcValueConst){ .kind = CCMMC_KIND_CONST_INT,
@@ -142,12 +143,14 @@ static size_t *get_array_size(CcmmcAst *id_array, size_t *array_dimension)
     for (dim = id_array->child; dim != NULL; dim = dim->right_sibling, dim_index++) {
         CcmmcValueConst value = eval_const_expr(dim);
         if (value.kind != CCMMC_KIND_CONST_INT) {
-            fprintf(stderr, ERROR("Array subscript is not an integer."), (size_t)0);
+            fprintf(stderr, ERROR("Array subscript is not an integer."),
+                dim->line_number);
             free(array_size);
             return NULL;
         }
         if (value.const_int <= 0) {
-            fprintf(stderr, ERROR("Array size must be positive."), (size_t)0);
+            fprintf(stderr, ERROR("Array size must be positive."),
+                dim->line_number);
             free(array_size);
             return NULL;
         }
@@ -191,11 +194,13 @@ static bool process_typedef(CcmmcAst *type_decl, CcmmcSymbolTable *table)
     // We don't support an existing array typedef
     assert(ccmmc_symbol_is_scalar(source_sym));
     if (source_sym == NULL) {
-        fprintf(stderr, ERROR("ID `%s' undeclared."), (size_t)0, source_str);
+        fprintf(stderr, ERROR("ID `%s' undeclared."),
+            type_decl->line_number, source_str);
         return true;
     }
     if (source_sym->kind != CCMMC_SYMBOL_KIND_TYPE) {
-        fprintf(stderr, ERROR("ID `%s' is not a type."), (size_t)0, source_str);
+        fprintf(stderr, ERROR("ID `%s' is not a type."),
+            type_decl->line_number, source_str);
         return true;
     }
 
@@ -206,7 +211,8 @@ static bool process_typedef(CcmmcAst *type_decl, CcmmcSymbolTable *table)
         const char *target_str = id->value_id.name;
         if (ccmmc_symbol_scope_exist(table->current, target_str)) {
             any_error = true;
-            fprintf (stderr, ERROR("ID `%s' redeclared."), (size_t)0, target_str);
+            fprintf (stderr, ERROR("ID `%s' redeclared."),
+                id->line_number, target_str);
             continue;
         }
         switch (id->value_id.kind) {
@@ -252,11 +258,13 @@ static bool process_variable(CcmmcAst *var_decl, CcmmcSymbolTable *table)
     const char *type_str = var_decl->child->value_id.name;
     CcmmcSymbol *type_sym = ccmmc_symbol_table_retrive(table, type_str);
     if (type_sym == NULL) {
-        fprintf(stderr, ERROR("ID `%s' undeclared."), (size_t)0, type_str);
+        fprintf(stderr, ERROR("ID `%s' undeclared."),
+            var_decl->line_number, type_str);
         return true;
     }
     if (type_sym->kind != CCMMC_SYMBOL_KIND_TYPE) {
-        fprintf(stderr, ERROR("ID `%s' is not a type."), (size_t)0, type_str);
+        fprintf(stderr, ERROR("ID `%s' is not a type."),
+            var_decl->line_number, type_str);
         return true;
     }
 
@@ -267,7 +275,8 @@ static bool process_variable(CcmmcAst *var_decl, CcmmcSymbolTable *table)
         const char *var_str = init_id->value_id.name;
         if (ccmmc_symbol_scope_exist(table->current, var_str)) {
             any_error = true;
-            fprintf (stderr, ERROR("ID `%s' redeclared."), (size_t)0, var_str);
+            fprintf (stderr, ERROR("ID `%s' redeclared."),
+                init_id->line_number, var_str);
             continue;
         }
         switch (init_id->value_id.kind) {

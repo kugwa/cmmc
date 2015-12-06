@@ -86,13 +86,15 @@ static void ccmmc_parser_error(yyscan_t scanner, CcmmcState *state, const char *
 
 program         : global_decl_list
                     {
-                        $$ = ccmmc_ast_new(CCMMC_AST_NODE_PROGRAM);
+                        $$ = ccmmc_ast_new(
+                            CCMMC_AST_NODE_PROGRAM, state->line_number);
                         ccmmc_ast_append_child($$, $1);
                         state->ast = $$;
                     }
                 |
                     {
-                        $$ = ccmmc_ast_new(CCMMC_AST_NODE_PROGRAM);
+                        $$ = ccmmc_ast_new(
+                            CCMMC_AST_NODE_PROGRAM, state->line_number);
                         state->ast = $$;
                     }
                 ;
@@ -123,42 +125,52 @@ global_decl     : type_decl
 
 function_decl   : type ID DL_LPAREN param_list DL_RPAREN DL_LBRACE block DL_RBRACE
                     {
-                        $$ = ccmmc_ast_new_decl(CCMMC_KIND_DECL_FUNCTION);
+                        $$ = ccmmc_ast_new_decl(
+                            CCMMC_KIND_DECL_FUNCTION, state->line_number);
                         CcmmcAst *param_list = ccmmc_ast_new(
-                            CCMMC_AST_NODE_PARAM_LIST);
+                            CCMMC_AST_NODE_PARAM_LIST, state->line_number);
                         ccmmc_ast_append_child(param_list, $4);
                         ccmmc_ast_append_children($$, 4, $1,
-                            ccmmc_ast_new_id($2, CCMMC_KIND_ID_NORMAL),
+                            ccmmc_ast_new_id($2,
+                                CCMMC_KIND_ID_NORMAL, state->line_number),
                             param_list, $7);
                     }
                 | VOID ID DL_LPAREN param_list DL_RPAREN DL_LBRACE block DL_RBRACE
                     {
-                        $$ = ccmmc_ast_new_decl(CCMMC_KIND_DECL_FUNCTION);
+                        $$ = ccmmc_ast_new_decl(
+                            CCMMC_KIND_DECL_FUNCTION, state->line_number);
                         CcmmcAst *param_list = ccmmc_ast_new(
-                            CCMMC_AST_NODE_PARAM_LIST);
+                            CCMMC_AST_NODE_PARAM_LIST, state->line_number);
                         ccmmc_ast_append_child(param_list, $4);
                         ccmmc_ast_append_children($$, 4,
-                            ccmmc_ast_new_id("void", CCMMC_KIND_ID_NORMAL),
-                            ccmmc_ast_new_id($2, CCMMC_KIND_ID_NORMAL),
+                            ccmmc_ast_new_id("void",
+                                CCMMC_KIND_ID_NORMAL, state->line_number),
+                            ccmmc_ast_new_id($2,
+                                CCMMC_KIND_ID_NORMAL, state->line_number),
                             param_list, $7);
                     }
                 | type ID DL_LPAREN  DL_RPAREN DL_LBRACE block DL_RBRACE
                     {
-                        $$ = ccmmc_ast_new_decl(CCMMC_KIND_DECL_FUNCTION);
+                        $$ = ccmmc_ast_new_decl(
+                            CCMMC_KIND_DECL_FUNCTION, state->line_number);
                         CcmmcAst *empty_param_list = ccmmc_ast_new(
-                            CCMMC_AST_NODE_PARAM_LIST);
+                            CCMMC_AST_NODE_PARAM_LIST, state->line_number);
                         ccmmc_ast_append_children($$, 4, $1,
-                            ccmmc_ast_new_id($2, CCMMC_KIND_ID_NORMAL),
+                            ccmmc_ast_new_id($2,
+                                CCMMC_KIND_ID_NORMAL, state->line_number),
                             empty_param_list, $6);
                     }
                 | VOID ID DL_LPAREN  DL_RPAREN DL_LBRACE block DL_RBRACE
                     {
-                        $$ = ccmmc_ast_new_decl(CCMMC_KIND_DECL_FUNCTION);
+                        $$ = ccmmc_ast_new_decl(
+                            CCMMC_KIND_DECL_FUNCTION, state->line_number);
                         CcmmcAst *empty_param_list = ccmmc_ast_new(
-                            CCMMC_AST_NODE_PARAM_LIST);
+                            CCMMC_AST_NODE_PARAM_LIST, state->line_number);
                         ccmmc_ast_append_children($$, 4,
-                            ccmmc_ast_new_id("void", CCMMC_KIND_ID_NORMAL),
-                            ccmmc_ast_new_id($2, CCMMC_KIND_ID_NORMAL),
+                            ccmmc_ast_new_id("void",
+                                CCMMC_KIND_ID_NORMAL, state->line_number),
+                            ccmmc_ast_new_id($2,
+                                CCMMC_KIND_ID_NORMAL, state->line_number),
                             empty_param_list, $6);
                     }
                 ;
@@ -175,16 +187,20 @@ param_list  : param_list DL_COMMA  param
 
 param       : type ID
                 {
-                    $$ = ccmmc_ast_new_decl(CCMMC_KIND_DECL_FUNCTION_PARAMETER);
+                    $$ = ccmmc_ast_new_decl(
+                        CCMMC_KIND_DECL_FUNCTION_PARAMETER, state->line_number);
                     ccmmc_ast_append_children($$, 2, $1,
-                        ccmmc_ast_new_id($2, CCMMC_KIND_ID_NORMAL));
+                        ccmmc_ast_new_id($2,
+                            CCMMC_KIND_ID_NORMAL, state->line_number));
                 }
             | type ID dim_fn
                 {
-                    $$ = ccmmc_ast_new_decl(CCMMC_KIND_DECL_FUNCTION_PARAMETER);
+                    $$ = ccmmc_ast_new_decl(
+                        CCMMC_KIND_DECL_FUNCTION_PARAMETER, state->line_number);
                     ccmmc_ast_append_children($$, 2, $1,
                         ccmmc_ast_append_child(
-                            ccmmc_ast_new_id($2, CCMMC_KIND_ID_ARRAY), $3));
+                            ccmmc_ast_new_id($2,
+                                CCMMC_KIND_ID_ARRAY, state->line_number), $3));
                 }
             ;
 
@@ -204,35 +220,39 @@ expr_null   :expr
                 }
             |
                 {
-                    $$ = ccmmc_ast_new(CCMMC_AST_NODE_NUL);
+                    $$ = ccmmc_ast_new(CCMMC_AST_NODE_NUL, state->line_number);
                 }
             ;
 
 block       : decl_list stmt_list
                 {
-                    $$ = ccmmc_ast_new(CCMMC_AST_NODE_BLOCK);
+                    $$ = ccmmc_ast_new(CCMMC_AST_NODE_BLOCK, state->line_number);
                     ccmmc_ast_append_children($$, 2,
                         ccmmc_ast_append_child(
-                            ccmmc_ast_new(CCMMC_AST_NODE_VARIABLE_DECL_LIST), $1),
+                            ccmmc_ast_new(CCMMC_AST_NODE_VARIABLE_DECL_LIST,
+                                state->line_number), $1),
                         ccmmc_ast_append_child(
-                            ccmmc_ast_new(CCMMC_AST_NODE_STMT_LIST), $2));
+                            ccmmc_ast_new(CCMMC_AST_NODE_STMT_LIST,
+                                state->line_number), $2));
                 }
             | stmt_list
                 {
-                    $$ = ccmmc_ast_new(CCMMC_AST_NODE_BLOCK);
+                    $$ = ccmmc_ast_new(CCMMC_AST_NODE_BLOCK, state->line_number);
                     ccmmc_ast_append_child($$,
                         ccmmc_ast_append_child(
-                            ccmmc_ast_new(CCMMC_AST_NODE_STMT_LIST), $1));
+                            ccmmc_ast_new(CCMMC_AST_NODE_STMT_LIST,
+                                state->line_number), $1));
                 }
             | decl_list
                 {
-                    $$ = ccmmc_ast_new(CCMMC_AST_NODE_BLOCK);
+                    $$ = ccmmc_ast_new(CCMMC_AST_NODE_BLOCK, state->line_number);
                     ccmmc_ast_append_child($$,
                         ccmmc_ast_append_child(
-                            ccmmc_ast_new(CCMMC_AST_NODE_VARIABLE_DECL_LIST), $1));
+                            ccmmc_ast_new(CCMMC_AST_NODE_VARIABLE_DECL_LIST,
+                                state->line_number), $1));
                 }
             |   {
-                    $$ = ccmmc_ast_new(CCMMC_AST_NODE_BLOCK);
+                    $$ = ccmmc_ast_new(CCMMC_AST_NODE_BLOCK, state->line_number);
                 }
             ;
 
@@ -258,53 +278,71 @@ decl        : type_decl
 
 type_decl   : TYPEDEF type id_list DL_SEMICOL
                 {
-                    $$ = ccmmc_ast_new_decl(CCMMC_KIND_DECL_TYPE);
+                    $$ = ccmmc_ast_new_decl(
+                        CCMMC_KIND_DECL_TYPE, state->line_number);
                     ccmmc_ast_append_children($$, 2, $2, $3);
                 }
             | TYPEDEF VOID id_list DL_SEMICOL
                 {
-                    $$ = ccmmc_ast_new_decl(CCMMC_KIND_DECL_TYPE);
-                    ccmmc_ast_append_children($$, 2, ccmmc_ast_new_id("void", CCMMC_KIND_ID_NORMAL), $3);
+                    $$ = ccmmc_ast_new_decl(
+                        CCMMC_KIND_DECL_TYPE, state->line_number);
+                    ccmmc_ast_append_children($$, 2,
+                        ccmmc_ast_new_id("void",
+                            CCMMC_KIND_ID_NORMAL, state->line_number), $3);
                 }
             ;
 
 var_decl    : type init_id_list DL_SEMICOL
                 {
-                    $$ = ccmmc_ast_new_decl(CCMMC_KIND_DECL_VARIABLE);
+                    $$ = ccmmc_ast_new_decl(
+                        CCMMC_KIND_DECL_VARIABLE, state->line_number);
                     ccmmc_ast_append_children($$, 2, $1, $2);
                 }
             | ID id_list DL_SEMICOL
                 {
-                    $$ = ccmmc_ast_new_decl(CCMMC_KIND_DECL_VARIABLE);
-                    ccmmc_ast_append_children($$, 2, ccmmc_ast_new_id($1, CCMMC_KIND_ID_NORMAL), $2);
+                    $$ = ccmmc_ast_new_decl(
+                        CCMMC_KIND_DECL_VARIABLE, state->line_number);
+                    ccmmc_ast_append_children($$, 2,
+                        ccmmc_ast_new_id($1,
+                            CCMMC_KIND_ID_NORMAL, state->line_number), $2);
                 }
             ;
 
 type        : INT
                 {
-                    $$ = ccmmc_ast_new_id("int", CCMMC_KIND_ID_NORMAL);
+                    $$ = ccmmc_ast_new_id("int",
+                        CCMMC_KIND_ID_NORMAL, state->line_number);
                 }
             | FLOAT
                 {
-                    $$ = ccmmc_ast_new_id("float", CCMMC_KIND_ID_NORMAL);
+                    $$ = ccmmc_ast_new_id("float",
+                        CCMMC_KIND_ID_NORMAL, state->line_number);
                 }
             ;
 
 id_list     : ID
                 {
-                    $$ = ccmmc_ast_new_id($1, CCMMC_KIND_ID_NORMAL);
+                    $$ = ccmmc_ast_new_id($1,
+                        CCMMC_KIND_ID_NORMAL, state->line_number);
                 }
             | id_list DL_COMMA ID
                 {
-                    $$ = ccmmc_ast_append_sibling($1, ccmmc_ast_new_id($3, CCMMC_KIND_ID_NORMAL));
+                    $$ = ccmmc_ast_append_sibling($1,
+                        ccmmc_ast_new_id($3,
+                            CCMMC_KIND_ID_NORMAL, state->line_number));
                 }
             | id_list DL_COMMA ID dim_decl
                 {
-                    $$ = ccmmc_ast_append_sibling($1, ccmmc_ast_append_child(ccmmc_ast_new_id($3, CCMMC_KIND_ID_ARRAY), $4));
+                    $$ = ccmmc_ast_append_sibling($1,
+                        ccmmc_ast_append_child(
+                            ccmmc_ast_new_id($3,
+                                CCMMC_KIND_ID_ARRAY, state->line_number), $4));
                 }
             | ID dim_decl
                 {
-                    $$ = ccmmc_ast_append_child(ccmmc_ast_new_id($1, CCMMC_KIND_ID_ARRAY), $2);
+                    $$ = ccmmc_ast_append_child(
+                        ccmmc_ast_new_id($1,
+                            CCMMC_KIND_ID_ARRAY, state->line_number), $2);
                 }
             ;
 
@@ -320,12 +358,14 @@ dim_decl    : DL_LBRACK cexpr DL_RBRACK
 
 cexpr       : cexpr OP_ADD mcexpr
                 {
-                    $$ = ccmmc_ast_new_expr(CCMMC_KIND_EXPR_BINARY_OP, CCMMC_KIND_OP_BINARY_ADD);
+                    $$ = ccmmc_ast_new_expr(CCMMC_KIND_EXPR_BINARY_OP,
+                        CCMMC_KIND_OP_BINARY_ADD, state->line_number);
                     ccmmc_ast_append_children($$, 2, $1, $3);
                 } /* This is for array declarations */
             | cexpr OP_SUB mcexpr
                 {
-                    $$ = ccmmc_ast_new_expr(CCMMC_KIND_EXPR_BINARY_OP, CCMMC_KIND_OP_BINARY_SUB);
+                    $$ = ccmmc_ast_new_expr(CCMMC_KIND_EXPR_BINARY_OP,
+                        CCMMC_KIND_OP_BINARY_SUB, state->line_number);
                     ccmmc_ast_append_children($$, 2, $1, $3);
                 }
             | mcexpr
@@ -336,12 +376,14 @@ cexpr       : cexpr OP_ADD mcexpr
 
 mcexpr      : mcexpr OP_MUL cfactor
                 {
-                    $$ = ccmmc_ast_new_expr(CCMMC_KIND_EXPR_BINARY_OP, CCMMC_KIND_OP_BINARY_MUL);
+                    $$ = ccmmc_ast_new_expr(CCMMC_KIND_EXPR_BINARY_OP,
+                        CCMMC_KIND_OP_BINARY_MUL, state->line_number);
                     ccmmc_ast_append_children($$, 2, $1, $3);
                 }
             | mcexpr OP_DIV cfactor
                 {
-                    $$ = ccmmc_ast_new_expr(CCMMC_KIND_EXPR_BINARY_OP, CCMMC_KIND_OP_BINARY_DIV);
+                    $$ = ccmmc_ast_new_expr(CCMMC_KIND_EXPR_BINARY_OP,
+                        CCMMC_KIND_OP_BINARY_DIV, state->line_number);
                     ccmmc_ast_append_children($$, 2, $1, $3);
                 }
             | cfactor
@@ -352,7 +394,8 @@ mcexpr      : mcexpr OP_MUL cfactor
 
 cfactor:    CONST
                 {
-                    $$ = ccmmc_ast_new(CCMMC_AST_NODE_CONST_VALUE);
+                    $$ = ccmmc_ast_new(
+                        CCMMC_AST_NODE_CONST_VALUE, state->line_number);
                     $$->value_const = $1;
                 }
             | DL_LPAREN cexpr DL_RPAREN
@@ -373,16 +416,19 @@ init_id_list: init_id
 
 init_id     : ID
                 {
-                    $$ = ccmmc_ast_new_id($1, CCMMC_KIND_ID_NORMAL);
+                    $$ = ccmmc_ast_new_id($1,
+                        CCMMC_KIND_ID_NORMAL, state->line_number);
                 }
             | ID dim_decl
                 {
                     $$ = ccmmc_ast_append_child(
-                        ccmmc_ast_new_id($1, CCMMC_KIND_ID_ARRAY), $2);
+                        ccmmc_ast_new_id($1,
+                            CCMMC_KIND_ID_ARRAY, state->line_number), $2);
                 }
             | ID OP_ASSIGN relop_expr
                 {
-                    $$ = ccmmc_ast_new_id($1, CCMMC_KIND_ID_WITH_INIT);
+                    $$ = ccmmc_ast_new_id($1,
+                        CCMMC_KIND_ID_WITH_INIT, state->line_number);
                     ccmmc_ast_append_child($$, $3);
                 }
             ;
@@ -403,47 +449,47 @@ stmt        : DL_LBRACE block DL_RBRACE
                 }
             | WHILE DL_LPAREN relop_expr DL_RPAREN stmt
                 {
-                    $$ = ccmmc_ast_new_stmt(CCMMC_KIND_STMT_WHILE);
+                    $$ = ccmmc_ast_new_stmt(CCMMC_KIND_STMT_WHILE, state->line_number);
                     ccmmc_ast_append_children($$, 2, $3, $5);
                 }
             | FOR DL_LPAREN assign_expr_list DL_SEMICOL relop_expr_list DL_SEMICOL assign_expr_list DL_RPAREN stmt
                 {
-                    $$ = ccmmc_ast_new_stmt(CCMMC_KIND_STMT_FOR);
+                    $$ = ccmmc_ast_new_stmt(CCMMC_KIND_STMT_FOR, state->line_number);
                     ccmmc_ast_append_children($$, 4, $3, $5, $7, $9);
                 }
             | var_ref OP_ASSIGN relop_expr DL_SEMICOL
                 {
-                    $$ = ccmmc_ast_new_stmt(CCMMC_KIND_STMT_ASSIGN);
+                    $$ = ccmmc_ast_new_stmt(CCMMC_KIND_STMT_ASSIGN, state->line_number);
                     ccmmc_ast_append_children($$, 2, $1, $3);
                 }
             | IF DL_LPAREN relop_expr DL_RPAREN stmt
                 {
-                    $$ = ccmmc_ast_new_stmt(CCMMC_KIND_STMT_IF);
+                    $$ = ccmmc_ast_new_stmt(CCMMC_KIND_STMT_IF, state->line_number);
                     ccmmc_ast_append_children($$, 3, $3, $5,
-                        ccmmc_ast_new(CCMMC_AST_NODE_NUL));
+                        ccmmc_ast_new(CCMMC_AST_NODE_NUL, state->line_number));
                 }
             | IF DL_LPAREN relop_expr DL_RPAREN stmt ELSE stmt
                 {
-                    $$ = ccmmc_ast_new_stmt(CCMMC_KIND_STMT_IF);
+                    $$ = ccmmc_ast_new_stmt(CCMMC_KIND_STMT_IF, state->line_number);
                     ccmmc_ast_append_children($$, 3, $3, $5, $7);
                 }
             | ID DL_LPAREN relop_expr_list DL_RPAREN DL_SEMICOL
                 {
-                    $$ = ccmmc_ast_new_stmt(CCMMC_KIND_STMT_FUNCTION_CALL);
+                    $$ = ccmmc_ast_new_stmt(CCMMC_KIND_STMT_FUNCTION_CALL, state->line_number);
                     ccmmc_ast_append_children($$, 2,
-                        ccmmc_ast_new_id($1, CCMMC_KIND_ID_NORMAL), $3);
+                        ccmmc_ast_new_id($1, CCMMC_KIND_ID_NORMAL, state->line_number), $3);
                 }
             | DL_SEMICOL
                 {
-                    $$ = ccmmc_ast_new(CCMMC_AST_NODE_NUL);
+                    $$ = ccmmc_ast_new(CCMMC_AST_NODE_NUL, state->line_number);
                 }
             | RETURN DL_SEMICOL
                 {
-                    $$ = ccmmc_ast_new_stmt(CCMMC_KIND_STMT_RETURN);
+                    $$ = ccmmc_ast_new_stmt(CCMMC_KIND_STMT_RETURN, state->line_number);
                 }
             | RETURN relop_expr DL_SEMICOL
                 {
-                    $$ = ccmmc_ast_new_stmt(CCMMC_KIND_STMT_RETURN);
+                    $$ = ccmmc_ast_new_stmt(CCMMC_KIND_STMT_RETURN, state->line_number);
                     ccmmc_ast_append_child($$, $2);
                 }
             ;
@@ -451,12 +497,12 @@ stmt        : DL_LBRACE block DL_RBRACE
 assign_expr_list: nonempty_assign_expr_list
                     {
                         $$ = ccmmc_ast_new(
-                            CCMMC_AST_NODE_NONEMPTY_ASSIGN_EXPR_LIST);
+                            CCMMC_AST_NODE_NONEMPTY_ASSIGN_EXPR_LIST, state->line_number);
                         ccmmc_ast_append_child($$, $1);
                     }
                 |
                     {
-                        $$ = ccmmc_ast_new(CCMMC_AST_NODE_NUL);
+                        $$ = ccmmc_ast_new(CCMMC_AST_NODE_NUL, state->line_number);
                     }
                 ;
 
@@ -472,9 +518,11 @@ nonempty_assign_expr_list   : nonempty_assign_expr_list DL_COMMA assign_expr
 
 assign_expr     : ID OP_ASSIGN relop_expr
                     {
-                        $$ = ccmmc_ast_new_stmt(CCMMC_KIND_STMT_ASSIGN);
+                        $$ = ccmmc_ast_new_stmt(
+                            CCMMC_KIND_STMT_ASSIGN, state->line_number);
                         ccmmc_ast_append_children($$, 2,
-                            ccmmc_ast_new_id($1, CCMMC_KIND_ID_NORMAL), $3);
+                            ccmmc_ast_new_id($1,
+                                CCMMC_KIND_ID_NORMAL, state->line_number), $3);
                     }
                 | relop_expr
                     {
@@ -488,8 +536,8 @@ relop_expr      : relop_term
                     }
                 | relop_expr OP_OR relop_term
                     {
-                        $$ = ccmmc_ast_new_expr(
-                            CCMMC_KIND_EXPR_BINARY_OP, CCMMC_KIND_OP_BINARY_OR);
+                        $$ = ccmmc_ast_new_expr(CCMMC_KIND_EXPR_BINARY_OP,
+                            CCMMC_KIND_OP_BINARY_OR, state->line_number);
                         ccmmc_ast_append_children($$, 2, $1, $3);
                     }
                 ;
@@ -500,8 +548,8 @@ relop_term      : relop_factor
                     }
                 | relop_term OP_AND relop_factor
                     {
-                        $$ = ccmmc_ast_new_expr(
-                            CCMMC_KIND_EXPR_BINARY_OP, CCMMC_KIND_OP_BINARY_AND);
+                        $$ = ccmmc_ast_new_expr(CCMMC_KIND_EXPR_BINARY_OP,
+                            CCMMC_KIND_OP_BINARY_AND, state->line_number);
                         ccmmc_ast_append_children($$, 2, $1, $3);
                     }
                 ;
@@ -519,33 +567,33 @@ relop_factor    : expr
 
 rel_op          : OP_EQ
                     {
-                        $$ = ccmmc_ast_new_expr(
-                            CCMMC_KIND_EXPR_BINARY_OP, CCMMC_KIND_OP_BINARY_EQ);
+                        $$ = ccmmc_ast_new_expr(CCMMC_KIND_EXPR_BINARY_OP,
+                            CCMMC_KIND_OP_BINARY_EQ, state->line_number);
                     }
                 | OP_GE
                     {
-                        $$ = ccmmc_ast_new_expr(
-                            CCMMC_KIND_EXPR_BINARY_OP, CCMMC_KIND_OP_BINARY_GE);
+                        $$ = ccmmc_ast_new_expr(CCMMC_KIND_EXPR_BINARY_OP,
+                            CCMMC_KIND_OP_BINARY_GE, state->line_number);
                     }
                 | OP_LE
                     {
-                        $$ = ccmmc_ast_new_expr(
-                            CCMMC_KIND_EXPR_BINARY_OP, CCMMC_KIND_OP_BINARY_LE);
+                        $$ = ccmmc_ast_new_expr(CCMMC_KIND_EXPR_BINARY_OP,
+                            CCMMC_KIND_OP_BINARY_LE, state->line_number);
                     }
                 | OP_NE
                     {
-                        $$ = ccmmc_ast_new_expr(
-                            CCMMC_KIND_EXPR_BINARY_OP, CCMMC_KIND_OP_BINARY_NE);
+                        $$ = ccmmc_ast_new_expr(CCMMC_KIND_EXPR_BINARY_OP,
+                            CCMMC_KIND_OP_BINARY_NE, state->line_number);
                     }
                 | OP_GT
                     {
-                        $$ = ccmmc_ast_new_expr(
-                            CCMMC_KIND_EXPR_BINARY_OP, CCMMC_KIND_OP_BINARY_GT);
+                        $$ = ccmmc_ast_new_expr(CCMMC_KIND_EXPR_BINARY_OP,
+                            CCMMC_KIND_OP_BINARY_GT, state->line_number);
                     }
                 | OP_LT
                     {
-                        $$ = ccmmc_ast_new_expr(
-                            CCMMC_KIND_EXPR_BINARY_OP, CCMMC_KIND_OP_BINARY_LT);
+                        $$ = ccmmc_ast_new_expr(CCMMC_KIND_EXPR_BINARY_OP,
+                            CCMMC_KIND_OP_BINARY_LT, state->line_number);
                     }
                 ;
 
@@ -553,12 +601,12 @@ rel_op          : OP_EQ
 relop_expr_list : nonempty_relop_expr_list
                     {
                         $$ = ccmmc_ast_new(
-                            CCMMC_AST_NODE_NONEMPTY_RELOP_EXPR_LIST);
+                            CCMMC_AST_NODE_NONEMPTY_RELOP_EXPR_LIST, state->line_number);
                         ccmmc_ast_append_child($$, $1);
                     }
                 |
                     {
-                        $$ = ccmmc_ast_new(CCMMC_AST_NODE_NUL);
+                        $$ = ccmmc_ast_new(CCMMC_AST_NODE_NUL, state->line_number);
                     }
                 ;
 
@@ -585,13 +633,13 @@ expr        : expr add_op term
 
 add_op      : OP_ADD
                 {
-                    $$ = ccmmc_ast_new_expr(
-                        CCMMC_KIND_EXPR_BINARY_OP, CCMMC_KIND_OP_BINARY_ADD);
+                    $$ = ccmmc_ast_new_expr(CCMMC_KIND_EXPR_BINARY_OP,
+                        CCMMC_KIND_OP_BINARY_ADD, state->line_number);
                 }
             | OP_SUB
                 {
-                    $$ = ccmmc_ast_new_expr(
-                        CCMMC_KIND_EXPR_BINARY_OP, CCMMC_KIND_OP_BINARY_SUB);
+                    $$ = ccmmc_ast_new_expr(CCMMC_KIND_EXPR_BINARY_OP,
+                        CCMMC_KIND_OP_BINARY_SUB, state->line_number);
                 }
             ;
 
@@ -608,13 +656,13 @@ term        : term mul_op factor
 
 mul_op      : OP_MUL
                 {
-                    $$ = ccmmc_ast_new_expr(
-                        CCMMC_KIND_EXPR_BINARY_OP, CCMMC_KIND_OP_BINARY_MUL);
+                    $$ = ccmmc_ast_new_expr(CCMMC_KIND_EXPR_BINARY_OP,
+                        CCMMC_KIND_OP_BINARY_MUL, state->line_number);
                 }
             | OP_DIV
                 {
-                    $$ = ccmmc_ast_new_expr(
-                        CCMMC_KIND_EXPR_BINARY_OP, CCMMC_KIND_OP_BINARY_DIV);
+                    $$ = ccmmc_ast_new_expr(CCMMC_KIND_EXPR_BINARY_OP,
+                        CCMMC_KIND_OP_BINARY_DIV, state->line_number);
                 }
             ;
 
@@ -624,86 +672,93 @@ factor      : DL_LPAREN relop_expr DL_RPAREN
                 }
             | OP_ADD DL_LPAREN relop_expr DL_RPAREN
                 {
-                    $$ = ccmmc_ast_new_expr(
-                        CCMMC_KIND_EXPR_UNARY_OP, CCMMC_KIND_OP_UNARY_POSITIVE);
+                    $$ = ccmmc_ast_new_expr(CCMMC_KIND_EXPR_UNARY_OP,
+                        CCMMC_KIND_OP_UNARY_POSITIVE, state->line_number);
                     ccmmc_ast_append_child($$, $3);
                 }
             | OP_SUB DL_LPAREN relop_expr DL_RPAREN
                 {
-                    $$ = ccmmc_ast_new_expr(
-                        CCMMC_KIND_EXPR_UNARY_OP, CCMMC_KIND_OP_UNARY_NEGATIVE);
+                    $$ = ccmmc_ast_new_expr(CCMMC_KIND_EXPR_UNARY_OP,
+                        CCMMC_KIND_OP_UNARY_NEGATIVE, state->line_number);
                     ccmmc_ast_append_child($$, $3);
                 }
             | OP_NOT DL_LPAREN relop_expr DL_RPAREN
                 {
-                    $$ = ccmmc_ast_new_expr(
-                        CCMMC_KIND_EXPR_UNARY_OP, CCMMC_KIND_OP_UNARY_LOGICAL_NEGATION);
+                    $$ = ccmmc_ast_new_expr(CCMMC_KIND_EXPR_UNARY_OP,
+                        CCMMC_KIND_OP_UNARY_LOGICAL_NEGATION, state->line_number);
                     ccmmc_ast_append_child($$, $3);
                 }
             | CONST
                 {
-                    $$ = ccmmc_ast_new(CCMMC_AST_NODE_CONST_VALUE);
+                    $$ = ccmmc_ast_new(CCMMC_AST_NODE_CONST_VALUE, state->line_number);
                     $$->value_const = $1;
                 }
             | OP_ADD CONST
                 {
-                    $$ = ccmmc_ast_new_expr(
-                        CCMMC_KIND_EXPR_UNARY_OP, CCMMC_KIND_OP_UNARY_POSITIVE);
-                    CcmmcAst *const_node = ccmmc_ast_new(CCMMC_AST_NODE_CONST_VALUE);
+                    $$ = ccmmc_ast_new_expr(CCMMC_KIND_EXPR_UNARY_OP,
+                        CCMMC_KIND_OP_UNARY_POSITIVE, state->line_number);
+                    CcmmcAst *const_node = ccmmc_ast_new(
+                        CCMMC_AST_NODE_CONST_VALUE, state->line_number);
                     const_node->value_const = $2;
                     ccmmc_ast_append_child($$, const_node);
                 }
             | OP_SUB CONST
                 {
-                    $$ = ccmmc_ast_new_expr(
-                        CCMMC_KIND_EXPR_UNARY_OP, CCMMC_KIND_OP_UNARY_NEGATIVE);
-                    CcmmcAst *const_node = ccmmc_ast_new(CCMMC_AST_NODE_CONST_VALUE);
+                    $$ = ccmmc_ast_new_expr(CCMMC_KIND_EXPR_UNARY_OP,
+                        CCMMC_KIND_OP_UNARY_NEGATIVE, state->line_number);
+                    CcmmcAst *const_node = ccmmc_ast_new(
+                        CCMMC_AST_NODE_CONST_VALUE, state->line_number);
                     const_node->value_const = $2;
                     ccmmc_ast_append_child($$, const_node);
                 }
             | OP_NOT CONST
                 {
-                    $$ = ccmmc_ast_new_expr(
-                        CCMMC_KIND_EXPR_UNARY_OP, CCMMC_KIND_OP_UNARY_LOGICAL_NEGATION);
-                    CcmmcAst *const_node = ccmmc_ast_new(CCMMC_AST_NODE_CONST_VALUE);
+                    $$ = ccmmc_ast_new_expr(CCMMC_KIND_EXPR_UNARY_OP,
+                        CCMMC_KIND_OP_UNARY_LOGICAL_NEGATION, state->line_number);
+                    CcmmcAst *const_node = ccmmc_ast_new(
+                        CCMMC_AST_NODE_CONST_VALUE, state->line_number);
                     const_node->value_const = $2;
                     ccmmc_ast_append_child($$, const_node);
                 }
             | ID DL_LPAREN relop_expr_list DL_RPAREN
                 {
                     $$ = ccmmc_ast_new_stmt(
-                        CCMMC_KIND_STMT_FUNCTION_CALL);
+                        CCMMC_KIND_STMT_FUNCTION_CALL, state->line_number);
                     ccmmc_ast_append_children($$, 2,
-                        ccmmc_ast_new_id($1, CCMMC_KIND_ID_NORMAL), $3);
+                        ccmmc_ast_new_id($1,
+                            CCMMC_KIND_ID_NORMAL, state->line_number), $3);
                 }
             | OP_ADD ID DL_LPAREN relop_expr_list DL_RPAREN
                 {
-                    $$ = ccmmc_ast_new_expr(
-                        CCMMC_KIND_EXPR_UNARY_OP, CCMMC_KIND_OP_UNARY_POSITIVE);
+                    $$ = ccmmc_ast_new_expr(CCMMC_KIND_EXPR_UNARY_OP,
+                        CCMMC_KIND_OP_UNARY_POSITIVE, state->line_number);
                     CcmmcAst *func_node = ccmmc_ast_new_stmt(
-                        CCMMC_KIND_STMT_FUNCTION_CALL);
+                        CCMMC_KIND_STMT_FUNCTION_CALL, state->line_number);
                     ccmmc_ast_append_children(func_node, 2,
-                        ccmmc_ast_new_id($2, CCMMC_KIND_ID_NORMAL), $4);
+                        ccmmc_ast_new_id($2,
+                            CCMMC_KIND_ID_NORMAL, state->line_number), $4);
                     ccmmc_ast_append_child($$, func_node);
                 }
             | OP_SUB ID DL_LPAREN relop_expr_list DL_RPAREN
                 {
-                    $$ = ccmmc_ast_new_expr(
-                        CCMMC_KIND_EXPR_UNARY_OP, CCMMC_KIND_OP_UNARY_NEGATIVE);
+                    $$ = ccmmc_ast_new_expr(CCMMC_KIND_EXPR_UNARY_OP,
+                        CCMMC_KIND_OP_UNARY_NEGATIVE, state->line_number);
                     CcmmcAst *func_node = ccmmc_ast_new_stmt(
-                        CCMMC_KIND_STMT_FUNCTION_CALL);
+                        CCMMC_KIND_STMT_FUNCTION_CALL, state->line_number);
                     ccmmc_ast_append_children(func_node, 2,
-                        ccmmc_ast_new_id($2, CCMMC_KIND_ID_NORMAL), $4);
+                        ccmmc_ast_new_id($2,
+                            CCMMC_KIND_ID_NORMAL, state->line_number), $4);
                     ccmmc_ast_append_child($$, func_node);
                 }
             | OP_NOT ID DL_LPAREN relop_expr_list DL_RPAREN
                 {
-                    $$ = ccmmc_ast_new_expr(
-                        CCMMC_KIND_EXPR_UNARY_OP, CCMMC_KIND_OP_UNARY_LOGICAL_NEGATION);
+                    $$ = ccmmc_ast_new_expr(CCMMC_KIND_EXPR_UNARY_OP,
+                        CCMMC_KIND_OP_UNARY_LOGICAL_NEGATION, state->line_number);
                     CcmmcAst *func_node = ccmmc_ast_new_stmt(
-                        CCMMC_KIND_STMT_FUNCTION_CALL);
+                        CCMMC_KIND_STMT_FUNCTION_CALL, state->line_number);
                     ccmmc_ast_append_children(func_node, 2,
-                        ccmmc_ast_new_id($2, CCMMC_KIND_ID_NORMAL), $4);
+                        ccmmc_ast_new_id($2,
+                            CCMMC_KIND_ID_NORMAL, state->line_number), $4);
                     ccmmc_ast_append_child($$, func_node);
                 }
             | var_ref
@@ -712,31 +767,33 @@ factor      : DL_LPAREN relop_expr DL_RPAREN
                 }
             | OP_ADD var_ref
                 {
-                    $$ = ccmmc_ast_new_expr(
-                        CCMMC_KIND_EXPR_UNARY_OP, CCMMC_KIND_OP_UNARY_POSITIVE);
+                    $$ = ccmmc_ast_new_expr(CCMMC_KIND_EXPR_UNARY_OP,
+                        CCMMC_KIND_OP_UNARY_POSITIVE, state->line_number);
                     ccmmc_ast_append_child($$, $2);
                 }
             | OP_SUB var_ref
                 {
-                    $$ = ccmmc_ast_new_expr(
-                        CCMMC_KIND_EXPR_UNARY_OP, CCMMC_KIND_OP_UNARY_NEGATIVE);
+                    $$ = ccmmc_ast_new_expr(CCMMC_KIND_EXPR_UNARY_OP,
+                        CCMMC_KIND_OP_UNARY_NEGATIVE, state->line_number);
                     ccmmc_ast_append_child($$, $2);
                 }
             | OP_NOT var_ref
                 {
-                    $$ = ccmmc_ast_new_expr(
-                        CCMMC_KIND_EXPR_UNARY_OP, CCMMC_KIND_OP_UNARY_LOGICAL_NEGATION);
+                    $$ = ccmmc_ast_new_expr(CCMMC_KIND_EXPR_UNARY_OP,
+                        CCMMC_KIND_OP_UNARY_LOGICAL_NEGATION, state->line_number);
                     ccmmc_ast_append_child($$, $2);
                 }
             ;
 
 var_ref     : ID
                 {
-                    $$ = ccmmc_ast_new_id($1, CCMMC_KIND_ID_NORMAL);
+                    $$ = ccmmc_ast_new_id($1,
+                        CCMMC_KIND_ID_NORMAL, state->line_number);
                 }
             | ID dim_list
                 {
-                    $$ = ccmmc_ast_new_id($1, CCMMC_KIND_ID_ARRAY);
+                    $$ = ccmmc_ast_new_id($1,
+                        CCMMC_KIND_ID_ARRAY, state->line_number);
                     ccmmc_ast_append_child($$, $2);
                 }
             ;

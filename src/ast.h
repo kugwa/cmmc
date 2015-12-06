@@ -132,6 +132,7 @@ typedef struct CcmmcAst_struct {
     struct CcmmcAst_struct *right_sibling;
     CcmmcAstNodeType type_node;
     CcmmcAstValueType type_value;
+    size_t line_number;
     union {
         CcmmcValueId value_id;
         CcmmcValueStmt value_stmt;
@@ -141,13 +142,18 @@ typedef struct CcmmcAst_struct {
     };
 } CcmmcAst;
 
-CcmmcAst        *ccmmc_ast_new                      (CcmmcAstNodeType type_node);
+CcmmcAst        *ccmmc_ast_new                      (CcmmcAstNodeType type_node,
+                                                     size_t line_number);
 CcmmcAst        *ccmmc_ast_new_id                   (char *lexeme,
-                                                     CcmmcKindId kind);
-CcmmcAst        *ccmmc_ast_new_stmt                 (CcmmcKindStmt kind);
-CcmmcAst        *ccmmc_ast_new_decl                 (CcmmcKindDecl kind);
+                                                     CcmmcKindId kind,
+                                                     size_t line_number);
+CcmmcAst        *ccmmc_ast_new_stmt                 (CcmmcKindStmt kind,
+                                                     size_t line_number);
+CcmmcAst        *ccmmc_ast_new_decl                 (CcmmcKindDecl kind,
+                                                     size_t line_number);
 CcmmcAst        *ccmmc_ast_new_expr                 (CcmmcKindExpr kind,
-                                                     int op_kind);
+                                                     int op_kind,
+                                                     size_t line_number);
 CcmmcAst        *ccmmc_ast_append_sibling           (CcmmcAst *node,
                                                      CcmmcAst *sibling);
 CcmmcAst        *ccmmc_ast_append_child             (CcmmcAst *parent,
