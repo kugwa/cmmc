@@ -82,4 +82,15 @@ CcmmcSymbol *ccmmc_symbol_table_retrive (
     return NULL;
 }
 
+bool ccmmc_symbol_scope_exist(CcmmcSymbolScope *scope, const char *name)
+{
+    int key = hash(name);
+    for (CcmmcSymbol *symbol = scope->hash_table[key];
+         symbol != NULL; symbol = symbol->next) {
+        if (strcmp(name, symbol->name) == 0)
+            return true;
+    }
+    return false;
+}
+
 // vim: set sw=4 ts=4 sts=4 et:

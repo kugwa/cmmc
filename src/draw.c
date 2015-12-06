@@ -189,4 +189,68 @@ void ccmmc_draw_ast(FILE *fp, const char *name, CcmmcAst *root)
     fprintf(fp , "}\n");
 }
 
+static void print_symbol_type(FILE *fp, CcmmcSymbolType type)
+{
+    switch (type.type_base) {
+        case CCMMC_AST_VALUE_INT:
+            fputs("int", fp);
+            break;
+        case CCMMC_AST_VALUE_FLOAT:
+            fputs("float", fp);
+            break;
+        case CCMMC_AST_VALUE_VOID:
+            fputs("void", fp);
+            break;
+        case CCMMC_AST_VALUE_INT_PTR:
+        case CCMMC_AST_VALUE_FLOAT_PTR:
+        case CCMMC_AST_VALUE_CONST_STRING:
+        case CCMMC_AST_VALUE_NONE:
+        case CCMMC_AST_VALUE_ERROR:
+        default:
+            assert(false);
+    }
+
+    if (ccmmc_symbol_type_is_array(type))
+        for (size_t i = 0; i < type.array_dimension; i++)
+            fprintf(fp, "[%zu]", type.array_size[i]);
+
+    if (ccmmc_symbol_type_is_function(type)) {
+        fputs(" (*)(", fp);
+        for (size_t i = 0; i < type.param_count; i++) {
+            print_symbol_type(fp, type.param_list[i]);
+            if (i == type.param_count - 1)
+                fputs(")", fp);
+            else
+                fputs(", ", fp);
+        }
+    }
+}
+
+void ccmmc_draw_symbol_scope(FILE *fp, CcmmcSymbolScope *scope)
+{
+    for (int i = 0; i < CCMMC_SYMBOL_SCOPE_HASH_TABLE_SIZE; i++) {
+        for (CcmmcSymbol *symbol = scope->hash_table[i]; symbol != NULL;
+             symbol = symbol->next) {
+            fprintf(fp, "Bucket %d: %s, ", i, symbol->name);
+            switch (symbol->kind) {
+                case CCMMC_SYMBOL_KIND_TYPE:
+                    fputs("TYPE, ", fp);
+                    print_symbol_type(fp, symbol->type);
+                    break;
+                case CCMMC_SYMBOL_KIND_VARIABLE:
+                    fputs("VARIABLE, ", fp);
+                    print_symbol_type(fp, symbol->type);
+                    break;
+                case CCMMC_SYMBOL_KIND_FUNCTION:
+                    fputs("FUNCTION, ", fp);
+                    print_symbol_type(fp, symbol->type);
+                    break;
+                default:
+                    assert(false);
+            }
+            putc('\n', fp);
+        }
+    }
+}
+
 // vim: set sw=4 ts=4 sts=4 et:

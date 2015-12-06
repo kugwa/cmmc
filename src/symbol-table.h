@@ -78,6 +78,9 @@ void             ccmmc_symbol_table_insert          (CcmmcSymbolTable *table,
                                                      CcmmcSymbolType type);
 CcmmcSymbol     *ccmmc_symbol_table_retrive         (CcmmcSymbolTable *table,
                                                      const char *name);
+bool             ccmmc_symbol_scope_exist           (CcmmcSymbolScope *scope,
+                                                     const char *name);
+
 
 #endif
 // vim: set sw=4 ts=4 sts=4 et:
