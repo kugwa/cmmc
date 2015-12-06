@@ -61,7 +61,8 @@ typedef enum CcmmcKindOpUnary_enum {
 typedef enum CcmmcKindConst_enum {
     CCMMC_KIND_CONST_INT,
     CCMMC_KIND_CONST_FLOAT,
-    CCMMC_KIND_CONST_STRING
+    CCMMC_KIND_CONST_STRING,
+    CCMMC_KIND_CONST_ERROR
 } CcmmcKindConst;
 
 typedef enum CcmmcKindStmt_enum {

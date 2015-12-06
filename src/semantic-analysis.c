@@ -15,13 +15,15 @@
 
 
 static CcmmcValueConst eval_const_expr(CcmmcAst *expr) {
-    if (expr->type_node == CCMMC_AST_NODE_CONST_VALUE) {
+    if (expr->type_node == CCMMC_AST_NODE_CONST_VALUE)
         return expr->value_const;
-    }
     assert(expr->type_node == CCMMC_AST_NODE_EXPR);
     assert(expr->value_expr.kind == CCMMC_KIND_EXPR_BINARY_OP);
     CcmmcValueConst left = eval_const_expr(expr->child);
     CcmmcValueConst right = eval_const_expr(expr->child->right_sibling);
+    if (left.kind == CCMMC_KIND_CONST_ERROR ||
+        right.kind == CCMMC_KIND_CONST_ERROR)
+        return (CcmmcValueConst){ .kind = CCMMC_KIND_CONST_ERROR };
     switch (expr->value_expr.op_binary) {
         case CCMMC_KIND_OP_BINARY_ADD:
             if (left.kind == CCMMC_KIND_CONST_INT) {
@@ -95,8 +97,7 @@ static CcmmcValueConst eval_const_expr(CcmmcAst *expr) {
                     if (right.const_int == 0) {
                         fprintf(stderr, ERROR("Integer division by zero."),
                             expr->line_number);
-                        // XXX: We should have an invalid type
-                        return (CcmmcValueConst){ .kind = CCMMC_KIND_CONST_STRING };
+                        return (CcmmcValueConst){ .kind = CCMMC_KIND_CONST_ERROR };
                     }
                     return (CcmmcValueConst){ .kind = CCMMC_KIND_CONST_INT,
                         .const_int = left.const_int / right.const_int };
@@ -142,6 +143,10 @@ static size_t *get_array_size(CcmmcAst *id_array, size_t *array_dimension)
     ERR_FATAL_CHECK(array_size, malloc);
     for (dim = id_array->child; dim != NULL; dim = dim->right_sibling, dim_index++) {
         CcmmcValueConst value = eval_const_expr(dim);
+        if (value.kind == CCMMC_KIND_CONST_ERROR) {
+            free(array_size);
+            return NULL;
+        }
         if (value.kind != CCMMC_KIND_CONST_INT) {
             fprintf(stderr, ERROR("Array subscript is not an integer."),
                 dim->line_number);
