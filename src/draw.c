@@ -180,7 +180,7 @@ static int printGVNode(FILE *fp, CcmmcAst *node, int count)
     return countAfterCheckSibling;
 }
 
-void ccmmc_draw_ast (FILE *fp, const char *name, CcmmcAst *root)
+void ccmmc_draw_ast(FILE *fp, const char *name, CcmmcAst *root)
 {
     fprintf(fp , "Digraph AST\n");
     fprintf(fp , "{\n");
