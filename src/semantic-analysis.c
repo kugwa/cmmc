@@ -341,13 +341,13 @@ static bool process_program(CcmmcAst *program, CcmmcSymbolTable *table)
         assert(global_decl->type_node == CCMMC_AST_NODE_DECL);
         switch (global_decl->value_decl.kind) {
             case CCMMC_KIND_DECL_TYPE:
-                any_error = any_error || process_typedef(global_decl, table);
+                any_error = process_typedef(global_decl, table) || any_error;
                 break;
             case CCMMC_KIND_DECL_VARIABLE:
-                any_error = any_error || process_variable(global_decl, table);
+                any_error = process_variable(global_decl, table) || any_error;
                 break;
             case CCMMC_KIND_DECL_FUNCTION:
-                any_error = any_error || process_function(global_decl, table);
+                any_error = process_function(global_decl, table) || any_error;
                 break;
             case CCMMC_KIND_DECL_FUNCTION_PARAMETER:
             default:
@@ -373,7 +373,7 @@ bool ccmmc_semantic_check(CcmmcAst *root, CcmmcSymbolTable *table)
     ccmmc_symbol_table_insert(table, "void", CCMMC_SYMBOL_KIND_TYPE,
         (CcmmcSymbolType){ .type_base = CCMMC_AST_VALUE_VOID });
     // Start processing from the program node
-    any_error = any_error || process_program(root, table);
+    any_error = process_program(root, table) || any_error;
     return !any_error;
 }
 
