@@ -38,7 +38,8 @@ int main (int argc, char **argv)
     }
 
     const char *source_name = argv[1];
-    FILE *source_handle = fopen(source_name, "r");
+    FILE *source_handle =
+        strcmp(source_name, "-") == 0 ? stdin : fopen(source_name, "r");
     if (source_handle == NULL) {
         fprintf(stderr, "%s: %s: %s\n", prog_name, source_name, ERR_MSG);
         exit(1);
