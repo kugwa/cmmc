@@ -202,6 +202,12 @@ static bool process_typedef(CcmmcAst *type_decl, CcmmcSymbolTable *table)
             case CCMMC_KIND_ID_ARRAY: {
                 size_t array_dimension;
                 size_t *array_size;
+                if (source_sym->type.type_base == CCMMC_AST_VALUE_VOID) {
+                    any_error = true;
+                    fprintf (stderr, ERROR("ID `%s' is an array of voids."),
+                        id->line_number, target_str);
+                    continue;
+                }
                 if (ccmmc_symbol_is_array(source_sym))
                     array_size = get_array_of_array_size(
                         id, &array_dimension,
@@ -254,6 +260,11 @@ static bool process_variable(CcmmcAst *var_decl, CcmmcSymbolTable *table)
     }
     if (type_sym->kind != CCMMC_SYMBOL_KIND_TYPE) {
         fprintf(stderr, ERROR("ID `%s' is not a type."),
+            var_decl->line_number, type_str);
+        return true;
+    }
+    if (type_sym->type.type_base == CCMMC_AST_VALUE_VOID) {
+        fprintf(stderr, ERROR("ID `%s' is a void type."),
             var_decl->line_number, type_str);
         return true;
     }
