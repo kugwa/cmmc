@@ -137,6 +137,7 @@ static void printLabelString(FILE *fp, CcmmcAst *astNode)
                 case CCMMC_KIND_CONST_STRING:
                     fprintf(fp, "\\\"%s\\\"", astNode->value_const.const_string);
                     break;
+                case CCMMC_KIND_CONST_ERROR:
                 default:
                     assert(false);
             }
