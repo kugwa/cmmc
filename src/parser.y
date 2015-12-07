@@ -149,6 +149,30 @@ function_decl   : type ID DL_LPAREN param_list DL_RPAREN DL_LBRACE block DL_RBRA
                                 CCMMC_KIND_ID_NORMAL, state->line_number),
                             param_list, $7);
                     }
+                | type ID DL_LPAREN VOID DL_RPAREN DL_LBRACE block DL_RBRACE
+                    {
+                        $$ = ccmmc_ast_new_decl(
+                            CCMMC_KIND_DECL_FUNCTION, state->line_number);
+                        CcmmcAst *empty_param_list = ccmmc_ast_new(
+                            CCMMC_AST_NODE_PARAM_LIST, state->line_number);
+                        ccmmc_ast_append_children($$, 4, $1,
+                            ccmmc_ast_new_id($2,
+                                CCMMC_KIND_ID_NORMAL, state->line_number),
+                            empty_param_list, $7);
+                    }
+                | VOID ID DL_LPAREN VOID DL_RPAREN DL_LBRACE block DL_RBRACE
+                    {
+                        $$ = ccmmc_ast_new_decl(
+                            CCMMC_KIND_DECL_FUNCTION, state->line_number);
+                        CcmmcAst *empty_param_list = ccmmc_ast_new(
+                            CCMMC_AST_NODE_PARAM_LIST, state->line_number);
+                        ccmmc_ast_append_children($$, 4,
+                            ccmmc_ast_new_id("void",
+                                CCMMC_KIND_ID_NORMAL, state->line_number),
+                            ccmmc_ast_new_id($2,
+                                CCMMC_KIND_ID_NORMAL, state->line_number),
+                            empty_param_list, $7);
+                    }
                 | type ID DL_LPAREN  DL_RPAREN DL_LBRACE block DL_RBRACE
                     {
                         $$ = ccmmc_ast_new_decl(
