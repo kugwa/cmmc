@@ -196,8 +196,8 @@ static bool process_typedef(CcmmcAst *type_decl, CcmmcSymbolTable *table)
     assert(type_decl->child->value_id.kind == CCMMC_KIND_ID_NORMAL);
     const char *source_str = type_decl->child->value_id.name;
     CcmmcSymbol *source_sym = ccmmc_symbol_table_retrive(table, source_str);
-    // We don't support an existing array typedef
-    assert(ccmmc_symbol_is_scalar(source_sym));
+    // We don't support function pointers
+    assert(!ccmmc_symbol_is_function(source_sym));
     if (source_sym == NULL) {
         fprintf(stderr, ERROR("ID `%s' undeclared."),
             type_decl->line_number, source_str);
@@ -227,9 +227,18 @@ static bool process_typedef(CcmmcAst *type_decl, CcmmcSymbolTable *table)
                 break;
             case CCMMC_KIND_ID_ARRAY: {
                 size_t array_dimension;
-                size_t *array_size = get_array_size(id, &array_dimension);
-                if (array_size == NULL)
+                size_t *array_size;
+                if (ccmmc_symbol_is_array(source_sym))
+                    array_size = get_array_of_array_size(
+                        id, &array_dimension,
+                        source_sym->type.array_dimension,
+                        source_sym->type.array_size);
+                else
+                    array_size = get_array_size(id, &array_dimension);
+                if (array_size == NULL) {
                     any_error = true;
+                    continue;
+                }
                 CcmmcSymbolType type = {
                     .type_base = source_sym->type.type_base,
                     .array_dimension = array_dimension,
@@ -262,6 +271,8 @@ static bool process_variable(CcmmcAst *var_decl, CcmmcSymbolTable *table)
     assert(var_decl->child->value_id.kind == CCMMC_KIND_ID_NORMAL);
     const char *type_str = var_decl->child->value_id.name;
     CcmmcSymbol *type_sym = ccmmc_symbol_table_retrive(table, type_str);
+    // We don't support function pointers
+    assert(!ccmmc_symbol_is_function(type_sym));
     if (type_sym == NULL) {
         fprintf(stderr, ERROR("ID `%s' undeclared."),
             var_decl->line_number, type_str);
