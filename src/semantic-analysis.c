@@ -17,15 +17,12 @@
 static CcmmcValueConst eval_const_expr(CcmmcAst *expr) {
     if (expr->type_node == CCMMC_AST_NODE_CONST_VALUE)
         return expr->value_const;
-    assert(expr->type_node == CCMMC_AST_NODE_EXPR);
-    assert(expr->value_expr.kind == CCMMC_KIND_EXPR_BINARY_OP);
-    CcmmcValueConst left = eval_const_expr(expr->child);
-    CcmmcValueConst right = eval_const_expr(expr->child->right_sibling);
-    if (left.kind == CCMMC_KIND_CONST_ERROR ||
-        right.kind == CCMMC_KIND_CONST_ERROR)
+    if (expr->type_node != CCMMC_AST_NODE_EXPR) {
+        fprintf(stderr, ERROR("Not a constant expression."), expr->line_number);
         return (CcmmcValueConst){ .kind = CCMMC_KIND_CONST_ERROR };
+    }
 
-#define EVAL_AND_RETURN_CONST(op) \
+#define EVAL_AND_RETURN_BINARY_ARITH(op) \
     do { \
         if (left.kind == CCMMC_KIND_CONST_INT) { \
             if (right.kind == CCMMC_KIND_CONST_INT) { \
@@ -66,43 +63,138 @@ static CcmmcValueConst eval_const_expr(CcmmcAst *expr) {
             } \
             assert(false); \
         } \
+        assert(false); \
     } while (false)
 
-    switch (expr->value_expr.op_binary) {
-        case CCMMC_KIND_OP_BINARY_ADD:
-            EVAL_AND_RETURN_CONST(+);
-            assert(false);
-        case CCMMC_KIND_OP_BINARY_SUB:
-            EVAL_AND_RETURN_CONST(-);
-            assert(false);
-        case CCMMC_KIND_OP_BINARY_MUL:
-            EVAL_AND_RETURN_CONST(*);
-            assert(false);
-        case CCMMC_KIND_OP_BINARY_DIV:
-            if (left.kind == CCMMC_KIND_CONST_INT &&
-                right.kind == CCMMC_KIND_CONST_INT &&
-                right.const_int == 0) {
-                fprintf(stderr, ERROR("Integer division by zero."),
-                    expr->line_number);
-                return (CcmmcValueConst){ .kind = CCMMC_KIND_CONST_ERROR };
-            }
-            EVAL_AND_RETURN_CONST(/);
-            assert(false);
-        case CCMMC_KIND_OP_BINARY_EQ:
-        case CCMMC_KIND_OP_BINARY_GE:
-        case CCMMC_KIND_OP_BINARY_LE:
-        case CCMMC_KIND_OP_BINARY_NE:
-        case CCMMC_KIND_OP_BINARY_GT:
-        case CCMMC_KIND_OP_BINARY_LT:
-        case CCMMC_KIND_OP_BINARY_AND:
-        case CCMMC_KIND_OP_BINARY_OR:
-        default:
-            assert(false);
+#define EVAL_AND_RETURN_BINARY_REL(op) \
+    do { \
+        ccmmc_ast_expr_set_is_constant(expr, true); \
+        ccmmc_ast_expr_set_is_int(expr); \
+        int result; \
+        if (left.kind == CCMMC_KIND_CONST_INT) { \
+            if (right.kind == CCMMC_KIND_CONST_INT) { \
+                result = left.const_int op right.const_int; \
+            } else if (right.kind == CCMMC_KIND_CONST_FLOAT) { \
+                float left_value = left.const_int; \
+                float right_value = right.const_float; \
+                result = left_value op right_value; \
+            } else { \
+                assert(false); \
+            } \
+        } else if (left.kind == CCMMC_KIND_CONST_FLOAT) { \
+            if (right.kind == CCMMC_KIND_CONST_INT) { \
+                float left_value = left.const_float; \
+                float right_value = right.const_int; \
+                result = left_value op right_value; \
+            } else if (right.kind == CCMMC_KIND_CONST_FLOAT) { \
+                result = left.const_float op right.const_float; \
+            } else { \
+                assert(false); \
+            } \
+        } else { \
+            assert(false); \
+        } \
+        ccmmc_ast_expr_set_int(expr, result); \
+        return (CcmmcValueConst){ \
+            .kind = CCMMC_KIND_CONST_INT, .const_int = result }; \
+    } while (false)
+
+#define EVAL_AND_RETURN_UNARY_SIGN(op) \
+    do { \
+        if (arg.kind == CCMMC_KIND_CONST_INT) { \
+            int result = op arg.const_int; \
+            ccmmc_ast_expr_set_is_constant(expr, true); \
+            ccmmc_ast_expr_set_is_int(expr); \
+            ccmmc_ast_expr_set_int(expr, result); \
+            return (CcmmcValueConst){ \
+                .kind = CCMMC_KIND_CONST_INT, .const_int = result }; \
+        } else if (arg.kind == CCMMC_KIND_CONST_FLOAT) { \
+            float result = op arg.const_float; \
+            ccmmc_ast_expr_set_is_constant(expr, true); \
+            ccmmc_ast_expr_set_is_float(expr); \
+            ccmmc_ast_expr_set_float(expr, result); \
+            return (CcmmcValueConst){ \
+                .kind = CCMMC_KIND_CONST_FLOAT, .const_float = result }; \
+        } \
+        assert(false); \
+    } while (false)
+
+    if (expr->value_expr.kind == CCMMC_KIND_EXPR_BINARY_OP) {
+        CcmmcValueConst left = eval_const_expr(expr->child);
+        CcmmcValueConst right = eval_const_expr(expr->child->right_sibling);
+        if (left.kind == CCMMC_KIND_CONST_ERROR ||
+            right.kind == CCMMC_KIND_CONST_ERROR)
+            return (CcmmcValueConst){ .kind = CCMMC_KIND_CONST_ERROR };
+
+        switch (expr->value_expr.op_binary) {
+            case CCMMC_KIND_OP_BINARY_ADD:
+                EVAL_AND_RETURN_BINARY_ARITH(+);
+            case CCMMC_KIND_OP_BINARY_SUB:
+                EVAL_AND_RETURN_BINARY_ARITH(-);
+            case CCMMC_KIND_OP_BINARY_MUL:
+                EVAL_AND_RETURN_BINARY_ARITH(*);
+            case CCMMC_KIND_OP_BINARY_DIV:
+                if (left.kind == CCMMC_KIND_CONST_INT &&
+                    right.kind == CCMMC_KIND_CONST_INT &&
+                    right.const_int == 0) {
+                    fprintf(stderr, ERROR("Integer division by zero."),
+                        expr->line_number);
+                    return (CcmmcValueConst){ .kind = CCMMC_KIND_CONST_ERROR };
+                }
+                EVAL_AND_RETURN_BINARY_ARITH(/);
+            case CCMMC_KIND_OP_BINARY_EQ:
+                EVAL_AND_RETURN_BINARY_REL(==);
+            case CCMMC_KIND_OP_BINARY_GE:
+                EVAL_AND_RETURN_BINARY_REL(>=);
+            case CCMMC_KIND_OP_BINARY_LE:
+                EVAL_AND_RETURN_BINARY_REL(<=);
+            case CCMMC_KIND_OP_BINARY_NE:
+                EVAL_AND_RETURN_BINARY_REL(!=);
+            case CCMMC_KIND_OP_BINARY_GT:
+                EVAL_AND_RETURN_BINARY_REL(>);
+            case CCMMC_KIND_OP_BINARY_LT:
+                EVAL_AND_RETURN_BINARY_REL(<);
+            case CCMMC_KIND_OP_BINARY_AND:
+                EVAL_AND_RETURN_BINARY_REL(&&);
+            case CCMMC_KIND_OP_BINARY_OR:
+                EVAL_AND_RETURN_BINARY_REL(||);
+            default:
+                assert(false);
+        }
+    } else if (expr->value_expr.kind == CCMMC_KIND_EXPR_UNARY_OP) {
+        CcmmcValueConst arg = eval_const_expr(expr->child);
+        if (arg.kind == CCMMC_KIND_CONST_ERROR)
+            return (CcmmcValueConst){ .kind = CCMMC_KIND_CONST_ERROR };
+
+        switch (expr->value_expr.op_unary) {
+            case CCMMC_KIND_OP_UNARY_POSITIVE:
+                EVAL_AND_RETURN_UNARY_SIGN(+);
+            case CCMMC_KIND_OP_UNARY_NEGATIVE:
+                EVAL_AND_RETURN_UNARY_SIGN(-);
+            case CCMMC_KIND_OP_UNARY_LOGICAL_NEGATION: {
+                int result;
+                if (arg.kind == CCMMC_KIND_CONST_INT) {
+                    result = !arg.const_int;
+                } else if (arg.kind == CCMMC_KIND_CONST_FLOAT) {
+                    result = !arg.const_float;
+                } else {
+                    assert(false);
+                }
+                ccmmc_ast_expr_set_is_constant(expr, true);
+                ccmmc_ast_expr_set_is_int(expr);
+                ccmmc_ast_expr_set_int(expr, result);
+                return (CcmmcValueConst){
+                    .kind = CCMMC_KIND_CONST_INT, .const_int = result };
+                }
+            default:
+                assert(false);
+        }
+    } else {
+        assert(false);
     }
-#undef EVAL_CONST_INT_INT
-#undef EVAL_CONST_INT_FLOAT
-#undef EVAL_CONST_FLOAT_INT
-#undef EVAL_CONST_FLOAT_FLOAT
+#undef EVAL_AND_RETURN_BINARY_ARITH
+#undef EVAL_AND_RETURN_BINARY_REL
+#undef EVAL_AND_RETURN_UNARY_SIGN
 }
 
 static size_t *get_array_size(CcmmcAst *id_array, size_t *array_dimension)
@@ -241,7 +333,8 @@ static bool process_relop_expr(CcmmcAst *expr, CcmmcSymbolTable *table)
     return any_error;
 }
 
-static bool process_variable(CcmmcAst *var_decl, CcmmcSymbolTable *table)
+static bool process_variable(
+    CcmmcAst *var_decl, CcmmcSymbolTable *table, bool constant_only)
 {
     bool any_error = false;
 
@@ -308,9 +401,55 @@ static bool process_variable(CcmmcAst *var_decl, CcmmcSymbolTable *table)
                 } break;
             case CCMMC_KIND_ID_WITH_INIT: {
                 assert(ccmmc_symbol_is_scalar(type_sym));
-                if (process_relop_expr(init_id, table)) {
-                    any_error = true;
-                    continue;
+                assert(init_id->child != NULL);
+                CcmmcAst *expr = init_id->child;
+                if (constant_only) {
+                    CcmmcValueConst result = eval_const_expr(expr);
+                    switch (result.kind) {
+                        case CCMMC_KIND_CONST_INT:
+                            if (type_sym->type.type_base == CCMMC_AST_VALUE_FLOAT) {
+                                // int -> float
+                                if (expr->type_node == CCMMC_AST_NODE_CONST_VALUE) {
+                                    expr->value_const = (CcmmcValueConst){
+                                        .kind = CCMMC_KIND_CONST_FLOAT,
+                                        .const_float = result.const_int };
+                                } else if (expr->type_node == CCMMC_AST_NODE_EXPR) {
+                                    ccmmc_ast_expr_set_is_constant(expr, true);
+                                    ccmmc_ast_expr_set_is_float(expr);
+                                    ccmmc_ast_expr_set_float(expr, result.const_int);
+                                } else {
+                                    assert(false);
+                                }
+                            }
+                            break;
+                        case CCMMC_KIND_CONST_FLOAT:
+                            if (type_sym->type.type_base == CCMMC_AST_VALUE_INT) {
+                                // float -> int
+                                if (expr->type_node == CCMMC_AST_NODE_CONST_VALUE) {
+                                    expr->value_const = (CcmmcValueConst){
+                                        .kind = CCMMC_KIND_CONST_INT,
+                                        .const_int = result.const_float };
+                                } else if (expr->type_node == CCMMC_AST_NODE_EXPR) {
+                                    ccmmc_ast_expr_set_is_constant(expr, true);
+                                    ccmmc_ast_expr_set_is_int(expr);
+                                    ccmmc_ast_expr_set_int(expr, result.const_float);
+                                } else {
+                                    assert(false);
+                                }
+                            }
+                            break;
+                        case CCMMC_KIND_CONST_ERROR:
+                            any_error = true;
+                            continue;
+                        case CCMMC_KIND_CONST_STRING:
+                        default:
+                            assert(false);
+                    }
+                } else {
+                    if (process_relop_expr(expr, table)) {
+                        any_error = true;
+                        continue;
+                    }
                 }
                 ccmmc_symbol_table_insert(table,
                     var_str, CCMMC_SYMBOL_KIND_VARIABLE, type_sym->type);
@@ -340,7 +479,7 @@ static bool process_program(CcmmcAst *program, CcmmcSymbolTable *table)
                 any_error = process_typedef(global_decl, table) || any_error;
                 break;
             case CCMMC_KIND_DECL_VARIABLE:
-                any_error = process_variable(global_decl, table) || any_error;
+                any_error = process_variable(global_decl, table, true) || any_error;
                 break;
             case CCMMC_KIND_DECL_FUNCTION:
                 any_error = process_function(global_decl, table) || any_error;
