@@ -208,24 +208,28 @@ static size_t *get_array_size(CcmmcAst *id_array, size_t *array_dimension)
     size_t *array_size = malloc(sizeof(size_t) * dim_count);
     ERR_FATAL_CHECK(array_size, malloc);
     for (dim = id_array->child; dim != NULL; dim = dim->right_sibling, dim_index++) {
-        CcmmcValueConst value = eval_const_expr(dim);
-        if (value.kind == CCMMC_KIND_CONST_ERROR) {
-            free(array_size);
-            return NULL;
+        if (dim->type_node == CCMMC_AST_NODE_NUL)
+            array_size[dim_index] = 0;
+        else {
+            CcmmcValueConst value = eval_const_expr(dim);
+            if (value.kind == CCMMC_KIND_CONST_ERROR) {
+                free(array_size);
+                return NULL;
+            }
+            if (value.kind != CCMMC_KIND_CONST_INT) {
+                fprintf(stderr, ERROR("Array subscript is not an integer."),
+                    dim->line_number);
+                free(array_size);
+                return NULL;
+            }
+            if (value.const_int <= 0) {
+                fprintf(stderr, ERROR("Array size must be positive."),
+                    dim->line_number);
+                free(array_size);
+                return NULL;
+            }
+            array_size[dim_index] = value.const_int;
         }
-        if (value.kind != CCMMC_KIND_CONST_INT) {
-            fprintf(stderr, ERROR("Array subscript is not an integer."),
-                dim->line_number);
-            free(array_size);
-            return NULL;
-        }
-        if (value.const_int <= 0) {
-            fprintf(stderr, ERROR("Array size must be positive."),
-                dim->line_number);
-            free(array_size);
-            return NULL;
-        }
-        array_size[dim_index] = value.const_int;
     }
 
     *array_dimension = dim_count;
@@ -461,9 +465,60 @@ static bool process_variable(
     return any_error;
 }
 
-static bool process_function(CcmmcAst *function_decl, CcmmcSymbolTable *table)
+static bool process_function(CcmmcAst *func_decl, CcmmcSymbolTable *table)
 {
     bool any_error = false;
+    size_t param_count = 0;
+    CcmmcSymbolType *param_list = NULL;
+    size_t i;
+    CcmmcAst *param;
+
+    // Create an entry for the function in global scope
+    if (func_decl->child->right_sibling->right_sibling->child != NULL){
+        for (param = func_decl->child->right_sibling->right_sibling->child; param != NULL; param = param->right_sibling, param_count++);
+        param_list = malloc(sizeof(CcmmcSymbolType) * param_count);
+        for (param = func_decl->child->right_sibling->right_sibling->child, i = 0; i < param_count; param = param->right_sibling, i++) {
+            param_list[i].type_base = ccmmc_symbol_table_retrive(table, param->child->value_id.name)->type.type_base;
+            if (param->child->right_sibling->value_id.kind == CCMMC_KIND_ID_ARRAY)
+                param_list[i].array_size = get_array_size(param->child->right_sibling, &param_list[i].array_dimension);
+            else
+                param_list[i].array_dimension = 0;
+            param_list[i].param_valid = false;
+        }
+    }
+    CcmmcSymbolType func_type = {
+        .type_base = ccmmc_symbol_table_retrive(table, func_decl->child->value_id.name)->type.type_base,
+        .array_dimension = 0,
+        .param_valid = true,
+        .param_count = param_count,
+        .param_list = param_list };
+    ccmmc_symbol_table_insert(table, func_decl->child->right_sibling->value_id.name, CCMMC_SYMBOL_KIND_FUNCTION, func_type);
+
+    // Push a new scope for the function
+    ccmmc_symbol_table_open_scope(table);
+    // Insert builtin types
+    ccmmc_symbol_table_insert(table, "int", CCMMC_SYMBOL_KIND_TYPE,
+        (CcmmcSymbolType){ .type_base = CCMMC_AST_VALUE_INT });
+    ccmmc_symbol_table_insert(table, "float", CCMMC_SYMBOL_KIND_TYPE,
+        (CcmmcSymbolType){ .type_base = CCMMC_AST_VALUE_FLOAT });
+    ccmmc_symbol_table_insert(table, "void", CCMMC_SYMBOL_KIND_TYPE,
+        (CcmmcSymbolType){ .type_base = CCMMC_AST_VALUE_VOID });
+    // Insert the parameters
+    CcmmcSymbol *func = ccmmc_symbol_table_retrive(table, func_decl->child->right_sibling->value_id.name);
+    for (param = func_decl->child->right_sibling->right_sibling->child, i = 0; i < param_count; param = param->right_sibling, i++) {
+        if (ccmmc_symbol_scope_exist(table->current, param->child->right_sibling->value_id.name)) {
+            any_error = true;
+            fprintf (stderr, ERROR("ID `%s' redeclared."),
+            param->child->right_sibling->line_number, param->child->right_sibling->value_id.name);
+            continue;
+        }
+        ccmmc_symbol_table_insert(table, param->child->right_sibling->value_id.name, CCMMC_SYMBOL_KIND_VARIABLE, func->type.param_list[i]);
+    }
+
+    // Process the list of local declarations
+
+    // Process the list of statements
+
     return any_error;
 }
 
