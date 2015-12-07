@@ -143,6 +143,37 @@ typedef struct CcmmcAst_struct {
     };
 } CcmmcAst;
 
+static inline bool ccmmc_ast_expr_get_is_constant(CcmmcAst *expr_node) {
+    return expr_node->value_expr.is_const_eval;
+}
+static inline void ccmmc_ast_expr_set_is_constant(CcmmcAst *expr_node, bool value) {
+    expr_node->value_expr.is_const_eval = value;
+}
+static inline bool ccmmc_ast_expr_get_is_int(CcmmcAst *expr_node) {
+    return expr_node->type_value == CCMMC_AST_VALUE_INT;
+}
+static inline void ccmmc_ast_expr_set_is_int(CcmmcAst *expr_node) {
+    expr_node->type_value = CCMMC_AST_VALUE_INT;
+}
+static inline bool ccmmc_ast_expr_get_is_float(CcmmcAst *expr_node) {
+    return expr_node->type_value == CCMMC_AST_VALUE_FLOAT;
+}
+static inline void ccmmc_ast_expr_set_is_float(CcmmcAst *expr_node) {
+    expr_node->type_value = CCMMC_AST_VALUE_FLOAT;
+}
+static inline int ccmmc_ast_expr_get_int(CcmmcAst *expr_node) {
+    return expr_node->value_expr.const_int;
+}
+static inline void ccmmc_ast_expr_set_int(CcmmcAst *expr_node, int value) {
+    expr_node->value_expr.const_int = value;
+}
+static inline float ccmmc_ast_expr_get_float(CcmmcAst *expr_node) {
+    return expr_node->value_expr.const_float;
+}
+static inline void ccmmc_ast_expr_set_float(CcmmcAst *expr_node, float value) {
+    expr_node->value_expr.const_float = value;
+}
+
 CcmmcAst        *ccmmc_ast_new                      (CcmmcAstNodeType type_node,
                                                      size_t line_number);
 CcmmcAst        *ccmmc_ast_new_id                   (char *lexeme,

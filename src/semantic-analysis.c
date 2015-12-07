@@ -24,100 +24,70 @@ static CcmmcValueConst eval_const_expr(CcmmcAst *expr) {
     if (left.kind == CCMMC_KIND_CONST_ERROR ||
         right.kind == CCMMC_KIND_CONST_ERROR)
         return (CcmmcValueConst){ .kind = CCMMC_KIND_CONST_ERROR };
+
+#define EVAL_AND_RETURN_CONST(op) \
+    do { \
+        if (left.kind == CCMMC_KIND_CONST_INT) { \
+            if (right.kind == CCMMC_KIND_CONST_INT) { \
+                int result = left.const_int op right.const_int; \
+                ccmmc_ast_expr_set_is_constant(expr, true); \
+                ccmmc_ast_expr_set_is_int(expr); \
+                ccmmc_ast_expr_set_int(expr, result); \
+                return (CcmmcValueConst){ \
+                    .kind = CCMMC_KIND_CONST_INT, .const_int = result }; \
+            } else if (right.kind == CCMMC_KIND_CONST_FLOAT) { \
+                float left_value = left.const_int; \
+                float right_value = right.const_float; \
+                float result = left_value op right_value; \
+                ccmmc_ast_expr_set_is_constant(expr, true); \
+                ccmmc_ast_expr_set_is_float(expr); \
+                ccmmc_ast_expr_set_float(expr, result); \
+                return (CcmmcValueConst){ \
+                    .kind = CCMMC_KIND_CONST_FLOAT, .const_float = result }; \
+            } \
+            assert(false); \
+        } else if (left.kind == CCMMC_KIND_CONST_FLOAT) { \
+            if (right.kind == CCMMC_KIND_CONST_INT) { \
+                float left_value = left.const_float; \
+                float right_value = right.const_int; \
+                float result = left_value op right_value; \
+                ccmmc_ast_expr_set_is_constant(expr, true); \
+                ccmmc_ast_expr_set_is_float(expr); \
+                ccmmc_ast_expr_set_float(expr, result); \
+                return (CcmmcValueConst){ \
+                    .kind = CCMMC_KIND_CONST_FLOAT, .const_float = result }; \
+            } else if (right.kind == CCMMC_KIND_CONST_FLOAT) { \
+                float result = left.const_float op right.const_float; \
+                ccmmc_ast_expr_set_is_constant(expr, true); \
+                ccmmc_ast_expr_set_is_float(expr); \
+                ccmmc_ast_expr_set_float(expr, result); \
+                return (CcmmcValueConst){ \
+                    .kind = CCMMC_KIND_CONST_FLOAT, .const_float = result }; \
+            } \
+            assert(false); \
+        } \
+    } while (false)
+
     switch (expr->value_expr.op_binary) {
         case CCMMC_KIND_OP_BINARY_ADD:
-            if (left.kind == CCMMC_KIND_CONST_INT) {
-                if (right.kind == CCMMC_KIND_CONST_INT) {
-                    return (CcmmcValueConst){ .kind = CCMMC_KIND_CONST_INT,
-                        .const_int = left.const_int + right.const_int };
-                } else {
-                    float left_value = left.const_int;
-                    float right_value = right.const_float;
-                    return (CcmmcValueConst){ .kind = CCMMC_KIND_CONST_FLOAT,
-                        .const_float = left_value + right_value };
-                }
-            } else {
-                if (right.kind == CCMMC_KIND_CONST_INT) {
-                    float left_value = left.const_float;
-                    float right_value = right.const_int;
-                    return (CcmmcValueConst){ .kind = CCMMC_KIND_CONST_FLOAT,
-                        .const_float = left_value + right_value };
-                } else {
-                    return (CcmmcValueConst){ .kind = CCMMC_KIND_CONST_FLOAT,
-                        .const_float = left.const_float + right.const_float };
-                }
-            }
+            EVAL_AND_RETURN_CONST(+);
+            assert(false);
         case CCMMC_KIND_OP_BINARY_SUB:
-            if (left.kind == CCMMC_KIND_CONST_INT) {
-                if (right.kind == CCMMC_KIND_CONST_INT) {
-                    return (CcmmcValueConst){ .kind = CCMMC_KIND_CONST_INT,
-                        .const_int = left.const_int - right.const_int };
-                } else {
-                    float left_value = left.const_int;
-                    float right_value = right.const_float;
-                    return (CcmmcValueConst){ .kind = CCMMC_KIND_CONST_FLOAT,
-                        .const_float = left_value - right_value };
-                }
-            } else {
-                if (right.kind == CCMMC_KIND_CONST_INT) {
-                    float left_value = left.const_float;
-                    float right_value = right.const_int;
-                    return (CcmmcValueConst){ .kind = CCMMC_KIND_CONST_FLOAT,
-                        .const_float = left_value - right_value };
-                } else {
-                    return (CcmmcValueConst){ .kind = CCMMC_KIND_CONST_FLOAT,
-                        .const_float = left.const_float - right.const_float };
-                }
-            }
+            EVAL_AND_RETURN_CONST(-);
+            assert(false);
         case CCMMC_KIND_OP_BINARY_MUL:
-            if (left.kind == CCMMC_KIND_CONST_INT) {
-                if (right.kind == CCMMC_KIND_CONST_INT) {
-                    return (CcmmcValueConst){ .kind = CCMMC_KIND_CONST_INT,
-                        .const_int = left.const_int * right.const_int };
-                } else {
-                    float left_value = left.const_int;
-                    float right_value = right.const_float;
-                    return (CcmmcValueConst){ .kind = CCMMC_KIND_CONST_FLOAT,
-                        .const_float = left_value * right_value };
-                }
-            } else {
-                if (right.kind == CCMMC_KIND_CONST_INT) {
-                    float left_value = left.const_float;
-                    float right_value = right.const_int;
-                    return (CcmmcValueConst){ .kind = CCMMC_KIND_CONST_FLOAT,
-                        .const_float = left_value * right_value };
-                } else {
-                    return (CcmmcValueConst){ .kind = CCMMC_KIND_CONST_FLOAT,
-                        .const_float = left.const_float * right.const_float };
-                }
-            }
+            EVAL_AND_RETURN_CONST(*);
+            assert(false);
         case CCMMC_KIND_OP_BINARY_DIV:
-            if (left.kind == CCMMC_KIND_CONST_INT) {
-                if (right.kind == CCMMC_KIND_CONST_INT) {
-                    if (right.const_int == 0) {
-                        fprintf(stderr, ERROR("Integer division by zero."),
-                            expr->line_number);
-                        return (CcmmcValueConst){ .kind = CCMMC_KIND_CONST_ERROR };
-                    }
-                    return (CcmmcValueConst){ .kind = CCMMC_KIND_CONST_INT,
-                        .const_int = left.const_int / right.const_int };
-                } else {
-                    float left_value = left.const_int;
-                    float right_value = right.const_float;
-                    return (CcmmcValueConst){ .kind = CCMMC_KIND_CONST_FLOAT,
-                        .const_float = left_value / right_value };
-                }
-            } else {
-                if (right.kind == CCMMC_KIND_CONST_INT) {
-                    float left_value = left.const_float;
-                    float right_value = right.const_int;
-                    return (CcmmcValueConst){ .kind = CCMMC_KIND_CONST_FLOAT,
-                        .const_float = left_value / right_value };
-                } else {
-                    return (CcmmcValueConst){ .kind = CCMMC_KIND_CONST_FLOAT,
-                        .const_float = left.const_float / right.const_float };
-                }
+            if (left.kind == CCMMC_KIND_CONST_INT &&
+                right.kind == CCMMC_KIND_CONST_INT &&
+                right.const_int == 0) {
+                fprintf(stderr, ERROR("Integer division by zero."),
+                    expr->line_number);
+                return (CcmmcValueConst){ .kind = CCMMC_KIND_CONST_ERROR };
             }
+            EVAL_AND_RETURN_CONST(/);
+            assert(false);
         case CCMMC_KIND_OP_BINARY_EQ:
         case CCMMC_KIND_OP_BINARY_GE:
         case CCMMC_KIND_OP_BINARY_LE:
@@ -129,6 +99,10 @@ static CcmmcValueConst eval_const_expr(CcmmcAst *expr) {
         default:
             assert(false);
     }
+#undef EVAL_CONST_INT_INT
+#undef EVAL_CONST_INT_FLOAT
+#undef EVAL_CONST_FLOAT_INT
+#undef EVAL_CONST_FLOAT_FLOAT
 }
 
 static size_t *get_array_size(CcmmcAst *id_array, size_t *array_dimension)
