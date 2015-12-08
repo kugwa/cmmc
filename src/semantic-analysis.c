@@ -465,6 +465,17 @@ static bool process_variable(
     return any_error;
 }
 
+static bool process_statement(CcmmcAst *stmt, CcmmcSymbolTable *table)
+{
+    bool any_error = false;
+
+    if (stmt->type_node == CCMMC_AST_NODE_NUL)
+        return any_error;
+    assert(stmt->type_node == CCMMC_AST_NODE_STMT);
+
+    return any_error;
+}
+
 static bool process_block(CcmmcAst *block, CcmmcSymbolTable *table)
 {
     bool any_error = false;
@@ -479,6 +490,7 @@ static bool process_block(CcmmcAst *block, CcmmcSymbolTable *table)
     ccmmc_symbol_table_insert(table, "void", CCMMC_SYMBOL_KIND_TYPE,
         (CcmmcSymbolType){ .type_base = CCMMC_AST_VALUE_VOID });
 
+    // This is a function block
     if (block->parent->type_node == CCMMC_AST_NODE_DECL &&
             block->parent->value_decl.kind == CCMMC_KIND_DECL_FUNCTION) {
         // Insert the parameters
@@ -486,8 +498,8 @@ static bool process_block(CcmmcAst *block, CcmmcSymbolTable *table)
             block->leftmost_sibling->right_sibling->value_id.name);
         CcmmcAst *param;
         size_t i;
-        for (param = block->leftmost_sibling->right_sibling->right_sibling->child, i = 0;
-                i < func->type.param_count; param = param->right_sibling, i++) {
+        for (param = block->leftmost_sibling->right_sibling->right_sibling->child,
+                i = 0; i < func->type.param_count; param = param->right_sibling, i++) {
             if (ccmmc_symbol_scope_exist(table->current,
                     param->child->right_sibling->value_id.name)) {
                 any_error = true;
@@ -501,9 +513,18 @@ static bool process_block(CcmmcAst *block, CcmmcSymbolTable *table)
         }
     }
 
+    CcmmcAst *child = block->child;
     // Process the list of local declarations
-
+    if (child != NULL && child->type_node == CCMMC_AST_NODE_VARIABLE_DECL_LIST) {
+        for (CcmmcAst *var_decl = child->child; var_decl != NULL; var_decl = var_decl->right_sibling)
+            any_error = process_variable(var_decl, table, false) | any_error;
+        child = child->right_sibling;
+    }
     // Process the list of statements
+    if (child != NULL && child->type_node == CCMMC_AST_NODE_STMT_LIST) {
+        for (CcmmcAst *stmt = child->child; stmt != NULL; stmt = stmt->right_sibling)
+            any_error = process_statement(stmt, table) | any_error;
+    }
 
     // Pop this scope
     ccmmc_symbol_table_close_scope(table);
