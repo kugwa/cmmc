@@ -217,6 +217,8 @@ static void print_symbol_type(FILE *fp, CcmmcSymbolType type)
 
     if (ccmmc_symbol_type_is_function(type)) {
         fputs(" (*)(", fp);
+        if (type.param_count == 0)
+            fputs("void)", fp);
         for (size_t i = 0; i < type.param_count; i++) {
             print_symbol_type(fp, type.param_list[i]);
             if (i == type.param_count - 1)
