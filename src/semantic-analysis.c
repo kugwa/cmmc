@@ -271,7 +271,7 @@ static bool process_typedef(CcmmcAst *type_decl, CcmmcSymbolTable *table)
     assert(type_decl->child->type_node == CCMMC_AST_NODE_ID);
     assert(type_decl->child->value_id.kind == CCMMC_KIND_ID_NORMAL);
     const char *source_str = type_decl->child->value_id.name;
-    CcmmcSymbol *source_sym = ccmmc_symbol_table_retrive(table, source_str);
+    CcmmcSymbol *source_sym = ccmmc_symbol_table_retrieve(table, source_str);
     // We don't support function pointers
     assert(!ccmmc_symbol_is_function(source_sym));
     if (source_sym == NULL) {
@@ -353,7 +353,7 @@ static bool process_variable(
     assert(var_decl->child->type_node == CCMMC_AST_NODE_ID);
     assert(var_decl->child->value_id.kind == CCMMC_KIND_ID_NORMAL);
     const char *type_str = var_decl->child->value_id.name;
-    CcmmcSymbol *type_sym = ccmmc_symbol_table_retrive(table, type_str);
+    CcmmcSymbol *type_sym = ccmmc_symbol_table_retrieve(table, type_str);
     // We don't support function pointers
     assert(!ccmmc_symbol_is_function(type_sym));
     if (type_sym == NULL) {
@@ -501,7 +501,7 @@ static bool process_block(CcmmcAst *block, CcmmcSymbolTable *table)
     if (block->parent->type_node == CCMMC_AST_NODE_DECL &&
             block->parent->value_decl.kind == CCMMC_KIND_DECL_FUNCTION) {
         // Insert the parameters
-        CcmmcSymbol *func = ccmmc_symbol_table_retrive(table,
+        CcmmcSymbol *func = ccmmc_symbol_table_retrieve(table,
             block->leftmost_sibling->right_sibling->value_id.name);
         CcmmcAst *param;
         size_t i;
@@ -553,7 +553,7 @@ static bool process_function(CcmmcAst *func_decl, CcmmcSymbolTable *table)
         param_list = malloc(sizeof(CcmmcSymbolType) * param_count);
         for (param = func_decl->child->right_sibling->right_sibling->child, i = 0;
                 i < param_count; param = param->right_sibling, i++) {
-            param_list[i].type_base = ccmmc_symbol_table_retrive(table,
+            param_list[i].type_base = ccmmc_symbol_table_retrieve(table,
                 param->child->value_id.name)->type.type_base;
             if (param->child->right_sibling->value_id.kind == CCMMC_KIND_ID_ARRAY)
                 param_list[i].array_size = get_array_size(param->child->right_sibling,
@@ -564,7 +564,7 @@ static bool process_function(CcmmcAst *func_decl, CcmmcSymbolTable *table)
         }
     }
     CcmmcSymbolType func_type = {
-        .type_base = ccmmc_symbol_table_retrive(table,
+        .type_base = ccmmc_symbol_table_retrieve(table,
             func_decl->child->value_id.name)->type.type_base,
         .array_dimension = 0,
         .param_valid = true,

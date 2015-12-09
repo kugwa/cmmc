@@ -76,7 +76,7 @@ void             ccmmc_symbol_table_insert          (CcmmcSymbolTable *table,
                                                      const char *name,
                                                      CcmmcSymbolKind kind,
                                                      CcmmcSymbolType type);
-CcmmcSymbol     *ccmmc_symbol_table_retrive         (CcmmcSymbolTable *table,
+CcmmcSymbol     *ccmmc_symbol_table_retrieve        (CcmmcSymbolTable *table,
                                                      const char *name);
 bool             ccmmc_symbol_scope_exist           (CcmmcSymbolScope *scope,
                                                      const char *name);

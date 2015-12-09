@@ -66,7 +66,7 @@ void ccmmc_symbol_table_insert(CcmmcSymbolTable *table,
     table->current->hash_table[key] = symbol;
 }
 
-CcmmcSymbol *ccmmc_symbol_table_retrive (
+CcmmcSymbol *ccmmc_symbol_table_retrieve (
     CcmmcSymbolTable *table, const char *name)
 {
     if (name == NULL)
