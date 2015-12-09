@@ -262,7 +262,7 @@ static size_t *get_array_of_array_size(CcmmcAst *id_array, size_t *array_dimensi
     return array_size;
 }
 
-static bool process_typedef(CcmmcAst *type_decl, CcmmcSymbolTable *table)
+static bool decl_typedef(CcmmcAst *type_decl, CcmmcSymbolTable *table)
 {
     bool any_error = false;
 
@@ -337,13 +337,13 @@ static bool process_typedef(CcmmcAst *type_decl, CcmmcSymbolTable *table)
     return any_error;
 }
 
-static bool process_relop_expr(CcmmcAst *expr, CcmmcSymbolTable *table)
+static bool check_relop_expr(CcmmcAst *expr, CcmmcSymbolTable *table)
 {
     bool any_error = false;
     return any_error;
 }
 
-static bool process_variable(
+static bool decl_variable(
     CcmmcAst *var_decl, CcmmcSymbolTable *table, bool constant_only)
 {
     bool any_error = false;
@@ -457,7 +457,7 @@ static bool process_variable(
                             assert(false);
                     }
                 } else {
-                    if (process_relop_expr(expr, table)) {
+                    if (check_relop_expr(expr, table)) {
                         any_error = true;
                         continue;
                     }
@@ -524,7 +524,7 @@ static bool process_block(CcmmcAst *block, CcmmcSymbolTable *table)
     // Process the list of local declarations
     if (child != NULL && child->type_node == CCMMC_AST_NODE_VARIABLE_DECL_LIST) {
         for (CcmmcAst *var_decl = child->child; var_decl != NULL; var_decl = var_decl->right_sibling)
-            any_error = process_variable(var_decl, table, false) | any_error;
+            any_error = decl_variable(var_decl, table, false) | any_error;
         child = child->right_sibling;
     }
     // Process the list of statements
@@ -538,7 +538,7 @@ static bool process_block(CcmmcAst *block, CcmmcSymbolTable *table)
     return any_error;
 }
 
-static bool process_function(CcmmcAst *func_decl, CcmmcSymbolTable *table)
+static bool decl_function(CcmmcAst *func_decl, CcmmcSymbolTable *table)
 {
     bool any_error = false;
     size_t param_count = 0;
@@ -587,13 +587,13 @@ static bool process_program(CcmmcAst *program, CcmmcSymbolTable *table)
         assert(global_decl->type_node == CCMMC_AST_NODE_DECL);
         switch (global_decl->value_decl.kind) {
             case CCMMC_KIND_DECL_TYPE:
-                any_error = process_typedef(global_decl, table) || any_error;
+                any_error = decl_typedef(global_decl, table) || any_error;
                 break;
             case CCMMC_KIND_DECL_VARIABLE:
-                any_error = process_variable(global_decl, table, true) || any_error;
+                any_error = decl_variable(global_decl, table, true) || any_error;
                 break;
             case CCMMC_KIND_DECL_FUNCTION:
-                any_error = process_function(global_decl, table) || any_error;
+                any_error = decl_function(global_decl, table) || any_error;
                 break;
             case CCMMC_KIND_DECL_FUNCTION_PARAMETER:
             default:
