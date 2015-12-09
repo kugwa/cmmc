@@ -246,7 +246,7 @@ static void print_symbol_type(FILE *fp, CcmmcSymbolType type)
             for (size_t i = 0; i < type.array_dimension; i++)
                 fprintf(fp, "[%zu]", type.array_size[i]);
         else
-                fprintf(fp, "*");
+            fprintf(fp, "*");
     }
 
     if (ccmmc_symbol_type_is_function(type)) {
