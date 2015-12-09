@@ -113,10 +113,6 @@ typedef struct CcmmcValueId_struct {
     // struct SymbolTableEntry *symbolTableEntry;
 } CcmmcValueId;
 
-typedef struct CcmmcValueType_struct {
-    char *name;
-} CcmmcValueType;
-
 typedef struct CcmmcValueConst_struct {
     CcmmcKindConst kind;
     union {

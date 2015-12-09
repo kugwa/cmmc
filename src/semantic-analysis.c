@@ -337,6 +337,21 @@ static bool decl_typedef(CcmmcAst *type_decl, CcmmcSymbolTable *table)
     return any_error;
 }
 
+static bool check_var_ref(CcmmcAst *ref, CcmmcSymbolTable *table)
+{
+    bool any_error = false;
+
+    if (ccmmc_symbol_table_retrieve(table, ref->value_id.name) == NULL) {
+        fprintf(stderr, ERROR("ID `%s' undeclared."),
+            ref->line_number, ref->value_id.name);
+        return true;
+    }
+    if (ref->value_id.kind == CCMMC_KIND_ID_ARRAY) {
+        
+    }
+    return any_error;
+}
+
 static bool check_relop_expr(CcmmcAst *expr, CcmmcSymbolTable *table)
 {
     bool any_error = false;
@@ -472,13 +487,40 @@ static bool decl_variable(
     return any_error;
 }
 
+static bool process_block(CcmmcAst*, CcmmcSymbolTable*);
 static bool process_statement(CcmmcAst *stmt, CcmmcSymbolTable *table)
 {
     bool any_error = false;
 
     if (stmt->type_node == CCMMC_AST_NODE_NUL)
-        return any_error;
+        return false;
+    if (stmt->type_node == CCMMC_AST_NODE_BLOCK)
+        return process_block(stmt, table) || any_error;
     assert(stmt->type_node == CCMMC_AST_NODE_STMT);
+
+    switch(stmt->value_stmt.kind) {
+        case CCMMC_KIND_STMT_WHILE:
+            any_error = check_relop_expr(stmt->child, table) || any_error;
+            any_error = process_statement(stmt->child->right_sibling, table) || any_error;
+            break;
+        case CCMMC_KIND_STMT_FOR:
+        case CCMMC_KIND_STMT_ASSIGN:
+            any_error = check_var_ref(stmt->child, table) || any_error;
+            any_error = check_relop_expr(stmt->child->right_sibling, table) || any_error;
+            break;
+        case CCMMC_KIND_STMT_IF:
+            any_error = check_relop_expr(stmt->child, table) || any_error;
+            any_error = process_statement(stmt->child->right_sibling, table) || any_error;
+            break;
+        case CCMMC_KIND_STMT_FUNCTION_CALL:
+            break;
+        case CCMMC_KIND_STMT_RETURN:
+            if (stmt->child != NULL)
+                any_error = check_relop_expr(stmt->child, table) || any_error;
+            break;
+        default:
+            assert(false);
+    }
 
     return any_error;
 }
@@ -530,7 +572,7 @@ static bool process_block(CcmmcAst *block, CcmmcSymbolTable *table)
     // Process the list of statements
     if (child != NULL && child->type_node == CCMMC_AST_NODE_STMT_LIST) {
         for (CcmmcAst *stmt = child->child; stmt != NULL; stmt = stmt->right_sibling)
-            any_error = process_statement(stmt, table) | any_error;
+            any_error = process_statement(stmt, table) || any_error;
     }
 
     // Pop this scope
