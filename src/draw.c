@@ -198,23 +198,17 @@ static int printGVNode(FILE *fp, CcmmcAst *node, int count)
         return count;
 
     int currentNodeCount = count;
-    fprintf(fp, "node%d [label =\"", count);
+    fprintf(fp, "node%d [shape=box] [label =\"", count);
     printLabelString(fp, node);
     fprintf(fp, "\"]\n");
-    ++count;
-    int countAfterCheckChildren = count;
-    if (node->child) {
-        countAfterCheckChildren = printGVNode(fp, node->child, count);
-        fprintf(fp, "node%d -> node%d [style = bold]\n", currentNodeCount, count);
+
+    for (CcmmcAst *child = node->child; child != NULL; child = child->right_sibling) {
+        int this_count = count + 1;
+        count = printGVNode(fp, child, this_count);
+        fprintf(fp, "node%d -> node%d [style = bold]\n", currentNodeCount, this_count);
     }
 
-    int countAfterCheckSibling = countAfterCheckChildren;
-    if (node->right_sibling) {
-        countAfterCheckSibling = printGVNode(fp, node->right_sibling, countAfterCheckChildren);
-        fprintf(fp, "node%d -> node%d [style = dashed]\n", currentNodeCount, countAfterCheckChildren);
-    }
-
-    return countAfterCheckSibling;
+    return count;
 }
 
 void ccmmc_draw_ast(FILE *fp, const char *name, CcmmcAst *root)
