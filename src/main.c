@@ -85,6 +85,11 @@ int main (int argc, char **argv)
             ccmmc_draw_symbol_scope(stdout, scope);
         }
     }
+
+    const char *dump_ast_after = getenv("CCMMC_DUMP_AST_AFTER");
+    if (dump_ast_after != NULL && *dump_ast_after != '\0')
+        ccmmc_draw_ast(stdout, source_name, state->ast);
+
     if (check_succeeded)
         puts("Parsing completed. No errors found.");
     else

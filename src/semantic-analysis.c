@@ -337,25 +337,194 @@ static bool decl_typedef(CcmmcAst *type_decl, CcmmcSymbolTable *table)
     return any_error;
 }
 
-static bool check_var_ref(CcmmcAst *ref, CcmmcSymbolTable *table)
+static bool check_relop_expr(CcmmcAst *expr, CcmmcSymbolTable *table);
+
+static bool check_call(CcmmcAst *call, CcmmcSymbolTable *table)
 {
     bool any_error = false;
+    call->type_value = CCMMC_AST_VALUE_INT;
+    return any_error;
+}
 
-    if (ccmmc_symbol_table_retrieve(table, ref->value_id.name) == NULL) {
-        fprintf(stderr, ERROR("ID `%s' undeclared."),
-            ref->line_number, ref->value_id.name);
+static bool check_array_subscript(CcmmcAst *ref, CcmmcSymbolTable *table,
+    size_t *array_dimension)
+{
+    bool any_error = false;
+    size_t count = 0;
+    for (CcmmcAst *dim = ref->child; dim != NULL; dim = dim->right_sibling, count++) {
+        any_error = check_relop_expr(dim, table) || any_error;
+        if (dim->type_value == CCMMC_AST_VALUE_ERROR)
+            continue;
+        if (dim->type_value == CCMMC_AST_VALUE_FLOAT ||
+            dim->type_value == CCMMC_AST_VALUE_VOID) {
+            any_error = true;
+            fprintf(stderr, ERROR("Array subscript is not an integer."),
+                dim->line_number);
+            continue;
+        }
+        assert(dim->type_value == CCMMC_AST_VALUE_INT);
+    }
+    if (array_dimension != NULL)
+        *array_dimension = count;
+    return any_error;
+}
+
+static bool check_array_ref(CcmmcAst *ref, CcmmcSymbolTable *table, CcmmcSymbol *symbol)
+{
+    bool any_error = false;
+    if (symbol->type.array_size == NULL)
+        return false;
+
+    CcmmcAst *dim;
+    size_t dim_count = 0;
+    for (dim = ref->child; dim != NULL; dim = dim->right_sibling, dim_count++);
+    assert(dim_count != 0);
+
+    if (symbol->type.array_dimension != dim_count) {
+        fprintf(stderr, ERROR("Incompatible array dimensions."), ref->line_number);
         return true;
     }
-    if (ref->value_id.kind == CCMMC_KIND_ID_ARRAY) {
-        
-    }
+    any_error = check_array_subscript(ref, table, NULL) || any_error;
     return any_error;
+}
+
+static bool check_var_ref(CcmmcAst *ref, CcmmcSymbolTable *table)
+{
+    CcmmcSymbol *symbol = ccmmc_symbol_table_retrieve(table, ref->value_id.name);
+    if (symbol == NULL) {
+        fprintf(stderr, ERROR("ID `%s' undeclared."),
+            ref->line_number, ref->value_id.name);
+        ref->type_value = CCMMC_AST_VALUE_ERROR;
+        return true;
+    }
+    if (symbol->kind != CCMMC_SYMBOL_KIND_VARIABLE) {
+        fprintf(stderr, ERROR("ID `%s' is not a variable."),
+            ref->line_number, ref->value_id.name);
+        ref->type_value = CCMMC_AST_VALUE_ERROR;
+        return true;
+    }
+    assert(symbol->type.type_base == CCMMC_AST_VALUE_INT ||
+           symbol->type.type_base == CCMMC_AST_VALUE_FLOAT);
+
+    switch (ref->value_id.kind) {
+        case CCMMC_KIND_ID_NORMAL:
+            ref->type_value = symbol->type.type_base;
+            return false;
+        case CCMMC_KIND_ID_ARRAY:
+            ref->type_value = symbol->type.type_base;
+            return check_array_ref(ref, table, symbol);
+        case CCMMC_KIND_ID_WITH_INIT:
+        default:
+            assert(false);
+    }
 }
 
 static bool check_relop_expr(CcmmcAst *expr, CcmmcSymbolTable *table)
 {
-    bool any_error = false;
-    return any_error;
+    if (expr->type_node == CCMMC_AST_NODE_CONST_VALUE) {
+        switch (expr->value_const.kind) {
+            case CCMMC_KIND_CONST_INT:
+                expr->type_value = CCMMC_AST_VALUE_INT;
+                break;
+            case CCMMC_KIND_CONST_FLOAT:
+                expr->type_value = CCMMC_AST_VALUE_FLOAT;
+                break;
+            case CCMMC_KIND_CONST_STRING:
+                fprintf(stderr, ERROR("Strings are not allowed in expressions."),
+                    expr->line_number);
+                expr->type_value = CCMMC_AST_VALUE_ERROR;
+                return true;
+            case CCMMC_KIND_CONST_ERROR:
+                expr->type_value = CCMMC_AST_VALUE_ERROR;
+                return true;
+            default:
+                assert(false);
+        }
+        return false;
+    }
+
+    if (expr->type_node == CCMMC_AST_NODE_STMT &&
+        expr->value_stmt.kind == CCMMC_KIND_STMT_FUNCTION_CALL) {
+        bool any_error = check_call(expr, table);
+        if (expr->type_value == CCMMC_AST_VALUE_VOID) {
+            fprintf(stderr, ERROR(
+                "Cannot use void type ID `%s' in expressions."),
+                expr->line_number, expr->value_id.name);
+            any_error = true;
+        }
+        return any_error;
+    }
+
+    if (expr->type_node == CCMMC_AST_NODE_ID)
+        return check_var_ref(expr, table);
+
+    assert(expr->type_node == CCMMC_AST_NODE_EXPR);
+
+    if (expr->value_expr.kind == CCMMC_KIND_EXPR_BINARY_OP) {
+        CcmmcAst *left = expr->child;
+        CcmmcAst *right = expr->child->right_sibling;
+        if (check_relop_expr(left, table) ||
+            check_relop_expr(right, table)) {
+            expr->type_value = CCMMC_AST_VALUE_ERROR;
+            return true;
+        }
+        if (left->type_value != CCMMC_AST_VALUE_INT &&
+            left->type_value != CCMMC_AST_VALUE_FLOAT)
+            assert(false);
+        if (right->type_value != CCMMC_AST_VALUE_INT &&
+            right->type_value != CCMMC_AST_VALUE_FLOAT)
+            assert(false);
+
+        switch (expr->value_expr.op_binary) {
+            case CCMMC_KIND_OP_BINARY_ADD:
+            case CCMMC_KIND_OP_BINARY_SUB:
+            case CCMMC_KIND_OP_BINARY_MUL:
+            case CCMMC_KIND_OP_BINARY_DIV:
+                if (left->type_value == CCMMC_AST_VALUE_INT &&
+                    right->type_value == CCMMC_AST_VALUE_INT)
+                    expr->type_value = CCMMC_AST_VALUE_INT;
+                else
+                    expr->type_value = CCMMC_AST_VALUE_FLOAT;
+                return false;
+            case CCMMC_KIND_OP_BINARY_EQ:
+            case CCMMC_KIND_OP_BINARY_GE:
+            case CCMMC_KIND_OP_BINARY_LE:
+            case CCMMC_KIND_OP_BINARY_NE:
+            case CCMMC_KIND_OP_BINARY_GT:
+            case CCMMC_KIND_OP_BINARY_LT:
+            case CCMMC_KIND_OP_BINARY_AND:
+            case CCMMC_KIND_OP_BINARY_OR:
+                expr->type_value = CCMMC_AST_VALUE_INT;
+                return false;
+            default:
+                assert(false);
+        }
+    }
+
+    if (expr->value_expr.kind == CCMMC_KIND_EXPR_UNARY_OP) {
+        CcmmcAst *arg = expr->child;
+        if (check_relop_expr(arg, table)) {
+            expr->type_value = CCMMC_AST_VALUE_ERROR;
+            return true;
+        }
+        if (arg->type_value != CCMMC_AST_VALUE_INT &&
+            arg->type_value != CCMMC_AST_VALUE_FLOAT)
+            assert(false);
+
+        switch (expr->value_expr.op_unary) {
+            case CCMMC_KIND_OP_UNARY_POSITIVE:
+            case CCMMC_KIND_OP_UNARY_NEGATIVE:
+                expr->type_value = arg->type_value;
+                return false;
+            case CCMMC_KIND_OP_UNARY_LOGICAL_NEGATION:
+                expr->type_value = CCMMC_AST_VALUE_INT;
+                return false;
+            default:
+                assert(false);
+        }
+    }
+
+    assert(false);
 }
 
 static bool decl_variable(
