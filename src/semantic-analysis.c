@@ -541,23 +541,28 @@ static bool process_block(CcmmcAst *block, CcmmcSymbolTable *table)
 static bool decl_function(CcmmcAst *func_decl, CcmmcSymbolTable *table)
 {
     bool any_error = false;
+    CcmmcAst *param_node = func_decl->child->right_sibling->right_sibling;
     size_t param_count = 0;
     CcmmcSymbolType *param_list = NULL;
 
     // Create an entry for the function in global scope
-    if (func_decl->child->right_sibling->right_sibling->child != NULL){
+    if (param_node->child != NULL){
         CcmmcAst *param;
         size_t i;
-        for (param = func_decl->child->right_sibling->right_sibling->child;
+        for (param = param_node->child;
                 param != NULL; param = param->right_sibling, param_count++);
         param_list = malloc(sizeof(CcmmcSymbolType) * param_count);
-        for (param = func_decl->child->right_sibling->right_sibling->child, i = 0;
+        ERR_FATAL_CHECK(param_list, malloc);
+        for (param = param_node->child, i = 0;
                 i < param_count; param = param->right_sibling, i++) {
             param_list[i].type_base = ccmmc_symbol_table_retrieve(table,
                 param->child->value_id.name)->type.type_base;
-            if (param->child->right_sibling->value_id.kind == CCMMC_KIND_ID_ARRAY)
+            if (param->child->right_sibling->value_id.kind == CCMMC_KIND_ID_ARRAY) {
                 param_list[i].array_size = get_array_size(param->child->right_sibling,
                     &param_list[i].array_dimension);
+                if (param_list[i].array_size == NULL)
+                    any_error = true;
+            }
             else
                 param_list[i].array_dimension = 0;
             param_list[i].param_valid = false;
@@ -574,8 +579,7 @@ static bool decl_function(CcmmcAst *func_decl, CcmmcSymbolTable *table)
         CCMMC_SYMBOL_KIND_FUNCTION, func_type);
 
     // process the function block
-    return process_block(func_decl->child->right_sibling->right_sibling->right_sibling,
-        table) || any_error;
+    return process_block(param_node->right_sibling, table) || any_error;
 }
 
 static bool process_program(CcmmcAst *program, CcmmcSymbolTable *table)

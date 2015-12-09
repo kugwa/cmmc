@@ -211,9 +211,13 @@ static void print_symbol_type(FILE *fp, CcmmcSymbolType type)
             assert(false);
     }
 
-    if (ccmmc_symbol_type_is_array(type))
-        for (size_t i = 0; i < type.array_dimension; i++)
-            fprintf(fp, "[%zu]", type.array_size[i]);
+    if (ccmmc_symbol_type_is_array(type)) {
+        if (type.array_size != NULL)
+            for (size_t i = 0; i < type.array_dimension; i++)
+                fprintf(fp, "[%zu]", type.array_size[i]);
+        else
+                fprintf(fp, "*");
+    }
 
     if (ccmmc_symbol_type_is_function(type)) {
         fputs(" (*)(", fp);
