@@ -11,6 +11,38 @@
 #include <string.h>
 
 
+static void print_ast_value(FILE *fp, CcmmcAstValueType type) {
+    putc(' ', fp);
+    switch (type) {
+        case CCMMC_AST_VALUE_INT:
+            fprintf(fp, "<int>");
+            break;
+        case CCMMC_AST_VALUE_FLOAT:
+            fprintf(fp, "<float>");
+            break;
+        case CCMMC_AST_VALUE_VOID:
+            fprintf(fp, "<void>");
+            break;
+        case CCMMC_AST_VALUE_INT_PTR:
+            fprintf(fp, "<int*>");
+            break;
+        case CCMMC_AST_VALUE_FLOAT_PTR:
+            fprintf(fp, "<float*>");
+            break;
+        case CCMMC_AST_VALUE_CONST_STRING:
+            fprintf(fp, "<const char*>");
+            break;
+        case CCMMC_AST_VALUE_NONE:
+            fprintf(fp, "<none>");
+            break;
+        case CCMMC_AST_VALUE_ERROR:
+            fprintf(fp, "<error>");
+            break;
+        default:
+            assert(false);
+    }
+}
+
 static void printLabelString(FILE *fp, CcmmcAst *astNode)
 {
     const char *binaryOpString[] = {
@@ -71,6 +103,7 @@ static void printLabelString(FILE *fp, CcmmcAst *astNode)
                 default:
                     assert(false);
             }
+            print_ast_value(fp, astNode->type_value);
             break;
         case CCMMC_AST_NODE_PARAM_LIST:
             fprintf(fp, "PARAM_LIST_NODE");
@@ -104,6 +137,7 @@ static void printLabelString(FILE *fp, CcmmcAst *astNode)
                     break;
                 case CCMMC_KIND_STMT_FUNCTION_CALL:
                     fprintf(fp, "FUNCTION_CALL_STMT");
+                    print_ast_value(fp, astNode->type_value);
                     break;
                 case CCMMC_KIND_STMT_RETURN:
                     fprintf(fp, "RETURN_STMT");
@@ -124,6 +158,7 @@ static void printLabelString(FILE *fp, CcmmcAst *astNode)
                 default:
                     assert(false);
             }
+            print_ast_value(fp, astNode->type_value);
             break;
         case CCMMC_AST_NODE_CONST_VALUE:
             fprintf(fp, "CONST_VALUE_NODE ");
@@ -141,6 +176,7 @@ static void printLabelString(FILE *fp, CcmmcAst *astNode)
                 default:
                     assert(false);
             }
+            print_ast_value(fp, astNode->type_value);
             break;
         case CCMMC_AST_NODE_NONEMPTY_ASSIGN_EXPR_LIST:
             fprintf(fp, "NONEMPTY_ASSIGN_EXPR_LIST_NODE");
