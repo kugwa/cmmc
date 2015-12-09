@@ -15,8 +15,14 @@
 
 
 static CcmmcValueConst eval_const_expr(CcmmcAst *expr) {
-    if (expr->type_node == CCMMC_AST_NODE_CONST_VALUE)
+    if (expr->type_node == CCMMC_AST_NODE_CONST_VALUE) {
+        if (expr->value_const.kind == CCMMC_KIND_CONST_STRING) {
+            fprintf(stderr, ERROR("Strings are not allowed in expressions."),
+                expr->line_number);
+            return (CcmmcValueConst){ .kind = CCMMC_KIND_CONST_ERROR };
+        }
         return expr->value_const;
+    }
     if (expr->type_node != CCMMC_AST_NODE_EXPR) {
         fprintf(stderr, ERROR("Not a constant expression."), expr->line_number);
         return (CcmmcValueConst){ .kind = CCMMC_KIND_CONST_ERROR };
@@ -446,6 +452,7 @@ static bool process_variable(
                             any_error = true;
                             continue;
                         case CCMMC_KIND_CONST_STRING:
+                            // string is already handled in eval_const_expr
                         default:
                             assert(false);
                     }
