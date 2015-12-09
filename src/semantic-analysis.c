@@ -409,9 +409,19 @@ static bool check_var_ref(CcmmcAst *ref, CcmmcSymbolTable *table)
     switch (ref->value_id.kind) {
         case CCMMC_KIND_ID_NORMAL:
             ref->type_value = symbol->type.type_base;
+            if (!ccmmc_symbol_is_scalar(symbol)) {
+                fprintf(stderr, ERROR("ID `%s' is not a scalar"),
+                    ref->line_number, ref->value_id.name);
+                return true;
+            }
             return false;
         case CCMMC_KIND_ID_ARRAY:
             ref->type_value = symbol->type.type_base;
+            if (!ccmmc_symbol_is_array(symbol)) {
+                fprintf(stderr, ERROR("ID `%s' is not an array"),
+                    ref->line_number, ref->value_id.name);
+                return true;
+            }
             return check_array_ref(ref, table, symbol);
         case CCMMC_KIND_ID_WITH_INIT:
         default:
