@@ -540,13 +540,11 @@ nonempty_assign_expr_list   : nonempty_assign_expr_list DL_COMMA assign_expr
                                }
                             ;
 
-assign_expr     : ID OP_ASSIGN relop_expr
+assign_expr     : var_ref OP_ASSIGN relop_expr
                     {
                         $$ = ccmmc_ast_new_stmt(
                             CCMMC_KIND_STMT_ASSIGN, state->line_number);
-                        ccmmc_ast_append_children($$, 2,
-                            ccmmc_ast_new_id($1,
-                                CCMMC_KIND_ID_NORMAL, state->line_number), $3);
+                        ccmmc_ast_append_children($$, 2, $1, $3);
                     }
                 | relop_expr
                     {
