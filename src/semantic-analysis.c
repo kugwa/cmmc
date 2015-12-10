@@ -339,13 +339,6 @@ static bool decl_typedef(CcmmcAst *type_decl, CcmmcSymbolTable *table)
 
 static bool check_relop_expr(CcmmcAst *expr, CcmmcSymbolTable *table);
 
-static bool check_call(CcmmcAst *call, CcmmcSymbolTable *table)
-{
-    bool any_error = false;
-    call->type_value = CCMMC_AST_VALUE_INT;
-    return any_error;
-}
-
 static bool check_array_subscript(CcmmcAst *ref, CcmmcSymbolTable *table,
     size_t *array_dimension)
 {
@@ -366,6 +359,87 @@ static bool check_array_subscript(CcmmcAst *ref, CcmmcSymbolTable *table,
     }
     if (array_dimension != NULL)
         *array_dimension = count;
+    return any_error;
+}
+
+static bool check_var_ref(CcmmcAst*, CcmmcSymbolTable*);
+
+static bool check_call(CcmmcAst *call, CcmmcSymbolTable *table)
+{
+    bool any_error = false;
+
+    // Check function symbol
+    CcmmcSymbol *func = ccmmc_symbol_table_retrieve(table,
+        call->child->value_id.name);
+    if (func == NULL) {
+        fprintf(stderr, ERROR("ID `%s' undeclared."),
+            call->child->line_number, call->child->value_id.name);
+        return true;
+    }
+    if (func->kind != CCMMC_SYMBOL_KIND_FUNCTION) {
+        fprintf(stderr, ERROR("ID `%s' is not a function."),
+            call->child->line_number, func->name);
+        return true;
+    }
+
+    // Check param_count
+    CcmmcAst *param = call->child->right_sibling->child;
+    size_t param_count = 0;
+    for (; param != NULL; param = param->right_sibling, param_count++);
+    if (param_count < func->type.param_count) {
+        fprintf(stderr, ERROR("Too few arguments to function `%s'."),
+            call->child->line_number, func->name);
+        return true;
+    }
+    if (param_count > func->type.param_count) {
+        fprintf(stderr, ERROR("Too many arguments to function `%s'."),
+            call->child->line_number, func->name);
+        return true;
+    }
+
+    // Check each parameter
+    param = call->child->right_sibling->child;
+    size_t i = 0;
+    for (; i < param_count; param = param->right_sibling, i++) {
+        if (param->type_node == CCMMC_AST_NODE_ID) {
+            CcmmcSymbol *param_sym = ccmmc_symbol_table_retrieve(table,
+                param->value_id.name);
+            if (param_sym == NULL) {
+                fprintf(stderr, ERROR("ID `%s' undeclared."),
+                    param->line_number, param->value_id.name);
+                continue;
+            }
+            if (param_sym->kind != CCMMC_SYMBOL_KIND_VARIABLE) {
+                fprintf(stderr, ERROR("ID `%s' is not a variable."),
+                    param->line_number, param_sym->name);
+                continue;
+            }
+            size_t dim;
+            any_error = check_array_subscript(param, table, &dim) || any_error;
+            if (dim > param_sym->type.array_dimension) {
+                fprintf(stderr, ERROR("Incompatible array dimensions."), param->line_number);
+                continue;
+            }
+            if (func->type.param_list[i].array_dimension == 0 &&
+                    dim < param_sym->type.array_dimension) {
+                fprintf(stderr, ERROR("Array `%s' passed to scalar parameter %zu."),
+                    param->line_number, param_sym->name, i);
+                continue;
+            }
+            if (func->type.param_list[i].array_dimension != 0 &&
+                    dim == param_sym->type.array_dimension) {
+                fprintf(stderr, ERROR("Scalar `%s' passed to array parameter %zu."),
+                    param->line_number, param_sym->name, i);
+                continue;
+            }
+        }
+        else {
+            check_relop_expr(param, table);
+        }
+    }
+
+    // Fill return type in the node of function call
+    call->type_value = func->type.type_base;
     return any_error;
 }
 
@@ -459,7 +533,7 @@ static bool check_relop_expr(CcmmcAst *expr, CcmmcSymbolTable *table)
         if (expr->type_value == CCMMC_AST_VALUE_VOID) {
             fprintf(stderr, ERROR(
                 "Cannot use void type ID `%s' in expressions."),
-                expr->line_number, expr->value_id.name);
+                expr->line_number, expr->child->value_id.name);
             any_error = true;
         }
         return any_error;
@@ -680,18 +754,38 @@ static bool process_statement(CcmmcAst *stmt, CcmmcSymbolTable *table)
     switch(stmt->value_stmt.kind) {
         case CCMMC_KIND_STMT_WHILE:
             any_error = check_relop_expr(stmt->child, table) || any_error;
-            any_error = process_statement(stmt->child->right_sibling, table) || any_error;
+            any_error = process_statement(stmt->child->right_sibling,
+                table) || any_error;
             break;
         case CCMMC_KIND_STMT_FOR:
+            for (CcmmcAst *assign = stmt->child->child; assign != NULL;
+                    assign = assign->right_sibling) {
+                any_error = process_statement(assign, table) || any_error;
+            }
+            for (CcmmcAst *expr = stmt->child->right_sibling->child; expr != NULL;
+                    expr = expr->right_sibling) {
+                any_error = check_relop_expr(expr, table) || any_error;
+            }
+            for (CcmmcAst *assign = stmt->child->right_sibling->right_sibling->child;
+                    assign != NULL; assign = assign->right_sibling) {
+                any_error = process_statement(assign, table) || any_error;
+            }
+            any_error = process_statement(
+                stmt->child->right_sibling->right_sibling->right_sibling,
+                table) || any_error;
+            break;
         case CCMMC_KIND_STMT_ASSIGN:
             any_error = check_var_ref(stmt->child, table) || any_error;
-            any_error = check_relop_expr(stmt->child->right_sibling, table) || any_error;
+            any_error = check_relop_expr(stmt->child->right_sibling,
+                table) || any_error;
             break;
         case CCMMC_KIND_STMT_IF:
             any_error = check_relop_expr(stmt->child, table) || any_error;
-            any_error = process_statement(stmt->child->right_sibling, table) || any_error;
+            any_error = process_statement(stmt->child->right_sibling, table)
+                || any_error;
             break;
         case CCMMC_KIND_STMT_FUNCTION_CALL:
+            any_error = check_call(stmt, table) || any_error;
             break;
         case CCMMC_KIND_STMT_RETURN:
             if (stmt->child != NULL)
@@ -745,7 +839,7 @@ static bool process_block(CcmmcAst *block, CcmmcSymbolTable *table)
     // Process the list of local declarations
     if (child != NULL && child->type_node == CCMMC_AST_NODE_VARIABLE_DECL_LIST) {
         for (CcmmcAst *var_decl = child->child; var_decl != NULL; var_decl = var_decl->right_sibling)
-            any_error = decl_variable(var_decl, table, false) | any_error;
+            any_error = decl_variable(var_decl, table, false) || any_error;
         child = child->right_sibling;
     }
     // Process the list of statements
