@@ -398,6 +398,19 @@ static bool check_call(CcmmcAst *call, CcmmcSymbolTable *table)
         return true;
     }
 
+    // Check special function: write
+    if (strcmp(func->name, "write") == 0) {
+        CcmmcAst *arg = call->child->right_sibling->child;
+        call->type_value = func->type.type_base;
+        if (arg->type_node == CCMMC_AST_NODE_CONST_VALUE &&
+            arg->value_const.kind == CCMMC_KIND_CONST_STRING) {
+            arg->type_value = CCMMC_AST_VALUE_CONST_STRING;
+            return any_error;
+        }
+        any_error = check_relop_expr(arg, table) || any_error;
+        return any_error;
+    }
+
     // Check each parameter
     param = call->child->right_sibling->child;
     size_t i = 0;
@@ -966,6 +979,18 @@ bool ccmmc_semantic_check(CcmmcAst *root, CcmmcSymbolTable *table)
         (CcmmcSymbolType){ .type_base = CCMMC_AST_VALUE_FLOAT });
     ccmmc_symbol_table_insert(table, "void", CCMMC_SYMBOL_KIND_TYPE,
         (CcmmcSymbolType){ .type_base = CCMMC_AST_VALUE_VOID });
+    // Insert builtin functions
+    ccmmc_symbol_table_insert(table, "read", CCMMC_SYMBOL_KIND_FUNCTION,
+        (CcmmcSymbolType){ .type_base = CCMMC_AST_VALUE_INT,
+            .param_valid = true, .param_count = 0 });
+    ccmmc_symbol_table_insert(table, "fread", CCMMC_SYMBOL_KIND_FUNCTION,
+        (CcmmcSymbolType){ .type_base = CCMMC_AST_VALUE_FLOAT,
+            .param_valid = true, .param_count = 0 });
+    ccmmc_symbol_table_insert(table, "write", CCMMC_SYMBOL_KIND_FUNCTION,
+        (CcmmcSymbolType){ .type_base = CCMMC_AST_VALUE_VOID,
+            .param_valid = true, .param_count = 1,
+            .param_list = (CcmmcSymbolType[]){
+                { .type_base = CCMMC_AST_VALUE_INT }}});
     // Start processing from the program node
     any_error = process_program(root, table) || any_error;
     return !any_error;
