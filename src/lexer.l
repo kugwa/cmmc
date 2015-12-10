@@ -12,6 +12,8 @@
 #include "libparser_a-parser.h"
 
 #include <assert.h>
+#include <limits.h>
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -82,13 +84,59 @@ ERROR           .
                     return ID;
                 }
 {CONST_INT}     {
+                    CcmmcState *state = yyextra;
+                    int errno_save = errno;
+                    errno = 0;
+                    long value = strtol(yytext, NULL, 10);
+                    if (value > INT_MAX ||
+                       (errno == ERANGE && value == LONG_MAX)) {
+                        fprintf(stderr, "%zu: error: `%s' overflows\n",
+                            state->line_number, yytext);
+                        exit(1);
+                    }
+                    if (value < INT_MIN ||
+                       (errno == ERANGE && value == LONG_MIN)) {
+                        fprintf(stderr, "%zu: error: `%s' underflows\n",
+                            state->line_number, yytext);
+                        exit(1);
+                    }
+                    if (errno != 0) {
+                        ERR_DECL;
+                        fprintf(stderr, "%zu: error: unexpected interger "
+                            "conversion failure: %s\n",
+                            state->line_number, ERR_MSG);
+                        exit(1);
+                    }
                     yylval->value_const.kind = CCMMC_KIND_CONST_INT;
-                    yylval->value_const.const_int = atoi(yytext);
+                    yylval->value_const.const_int = value;
+                    errno = errno_save;
                     return CONST;
                 }
 {CONST_FLOAT}   {
+                    CcmmcState *state = yyextra;
+                    int errno_save = errno;
+                    errno = 0;
+                    float value = strtof(yytext, NULL);
+                    if (errno == ERANGE && value == HUGE_VAL) {
+                        fprintf(stderr, "%zu: error: `%s' overflows\n",
+                            state->line_number, yytext);
+                        exit(1);
+                    }
+                    if (errno == ERANGE && value == 0.0) {
+                        fprintf(stderr, "%zu: error: `%s' underflows\n",
+                            state->line_number, yytext);
+                        exit(1);
+                    }
+                    if (errno != 0) {
+                        ERR_DECL;
+                        fprintf(stderr, "%zu: error: unexpected floating point "
+                            "conversion failure: %s\n",
+                            state->line_number, ERR_MSG);
+                        exit(1);
+                    }
                     yylval->value_const.kind = CCMMC_KIND_CONST_FLOAT;
-                    yylval->value_const.const_float = atof(yytext);
+                    yylval->value_const.const_float = value;
+                    errno = errno_save;
                     return CONST;
                 }
 {CONST_STRING}  {
