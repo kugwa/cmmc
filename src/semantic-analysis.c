@@ -12,6 +12,7 @@
 #include <string.h>
 
 #define ERROR(msg) ("Error found in line %zu\n" msg "\n")
+#define WARNING(msg) ("Warning in line %zu\n" msg "\n")
 
 
 static CcmmcValueConst eval_const_expr(CcmmcAst *expr) {
@@ -744,6 +745,7 @@ static bool process_block(CcmmcAst*, CcmmcSymbolTable*);
 static bool process_statement(CcmmcAst *stmt, CcmmcSymbolTable *table)
 {
     bool any_error = false;
+    CcmmcSymbol *func_sym;
 
     if (stmt->type_node == CCMMC_AST_NODE_NUL)
         return false;
@@ -788,8 +790,26 @@ static bool process_statement(CcmmcAst *stmt, CcmmcSymbolTable *table)
             any_error = check_call(stmt, table) || any_error;
             break;
         case CCMMC_KIND_STMT_RETURN:
-            if (stmt->child != NULL)
+            for (CcmmcAst *func = stmt->parent; ; func = func->parent) {
+                if (func->type_node == CCMMC_AST_NODE_DECL &&
+                        func->value_decl.kind == CCMMC_KIND_DECL_FUNCTION) {
+                    func_sym = ccmmc_symbol_table_retrieve(table,
+                        func->child->right_sibling->value_id.name);
+                    break;
+                }
+            }
+            if (stmt->child == NULL &&
+                    func_sym->type.type_base != CCMMC_AST_VALUE_VOID) {
+                fprintf(stderr, WARNING("Incompatible return type."),
+                    stmt->line_number);
+            }
+            else {
                 any_error = check_relop_expr(stmt->child, table) || any_error;
+                if (func_sym->type.type_base != stmt->child->type_value) {
+                    fprintf(stderr, WARNING("Incompatible return type."),
+                        stmt->line_number);
+                }
+            }
             break;
         default:
             assert(false);
@@ -859,6 +879,15 @@ static bool decl_function(CcmmcAst *func_decl, CcmmcSymbolTable *table)
     CcmmcAst *param_node = func_decl->child->right_sibling->right_sibling;
     size_t param_count = 0;
     CcmmcSymbolType *param_list = NULL;
+
+    // Check if redeclared
+    if (ccmmc_symbol_scope_exist(table->current,
+            func_decl->child->right_sibling->value_id.name)) {
+        fprintf (stderr, ERROR("ID `%s' redeclared."),
+            func_decl->line_number,
+            func_decl->child->right_sibling->value_id.name);
+        return true;
+    }
 
     // Create an entry for the function in global scope
     if (param_node->child != NULL){
