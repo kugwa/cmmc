@@ -421,34 +421,39 @@ static bool check_call(CcmmcAst *call, CcmmcSymbolTable *table)
             if (param_sym == NULL) {
                 fprintf(stderr, ERROR("ID `%s' undeclared."),
                     param->line_number, param->value_id.name);
+                any_error = true;
                 continue;
             }
             if (param_sym->kind != CCMMC_SYMBOL_KIND_VARIABLE) {
                 fprintf(stderr, ERROR("ID `%s' is not a variable."),
                     param->line_number, param_sym->name);
+                any_error = true;
                 continue;
             }
             size_t dim;
             any_error = check_array_subscript(param, table, &dim) || any_error;
             if (dim > param_sym->type.array_dimension) {
                 fprintf(stderr, ERROR("Incompatible array dimensions."), param->line_number);
+                any_error = true;
                 continue;
             }
             if (func->type.param_list[i].array_dimension == 0 &&
                     dim < param_sym->type.array_dimension) {
                 fprintf(stderr, ERROR("Array `%s' passed to scalar parameter %zu."),
                     param->line_number, param_sym->name, i);
+                any_error = true;
                 continue;
             }
             if (func->type.param_list[i].array_dimension != 0 &&
                     dim == param_sym->type.array_dimension) {
                 fprintf(stderr, ERROR("Scalar `%s' passed to array parameter %zu."),
                     param->line_number, param_sym->name, i);
+                any_error = true;
                 continue;
             }
         }
         else {
-            check_relop_expr(param, table);
+            any_error = check_relop_expr(param, table) || any_error;
         }
     }
 
@@ -811,10 +816,10 @@ static bool process_statement(CcmmcAst *stmt, CcmmcSymbolTable *table)
                     break;
                 }
             }
-            if (stmt->child == NULL &&
-                    func_sym->type.type_base != CCMMC_AST_VALUE_VOID) {
-                fprintf(stderr, WARNING("Incompatible return type."),
-                    stmt->line_number);
+            if (stmt->child == NULL) {
+                if (func_sym->type.type_base != CCMMC_AST_VALUE_VOID)
+                    fprintf(stderr, WARNING("Incompatible return type."),
+                        stmt->line_number);
             }
             else {
                 any_error = check_relop_expr(stmt->child, table) || any_error;
