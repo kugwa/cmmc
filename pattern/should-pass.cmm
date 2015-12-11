@@ -1,0 +1,10 @@
+/* Allow parm_list to be "void" */
+void main(void) {
+    int a[1], n = 10;
+
+    /* Allow array dereference in assign_expr_list */
+    for (a[1] = 0; a[1] < n; a[1] = a[1] + 1);
+}
+
+/* Allow var_decl or type_decl to be the last global_decl */
+int unused;

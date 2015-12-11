@@ -12,6 +12,7 @@ EXTRA_DIST =				\
 	pattern/not-scalar-or-array.cmm	\
 	pattern/not-type.cmm		\
 	pattern/not-var.cmm		\
+	pattern/should-pass.cmm		\
 	pattern/string-expr.cmm		\
 	pattern/void-expr.cmm		\
 	pattern/void-var-and-array.cmm	\
