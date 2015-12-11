@@ -1,0 +1,6 @@
+int func(int arg) {
+	return arg;
+}
+int main(void) {
+	return func(func);
+}

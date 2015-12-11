@@ -1,0 +1,7 @@
+void func(int arg) { }
+int main(void) {
+	int a = 4;
+	float b = 5.5;
+	a = a + b - func(3);
+	return 0;
+}

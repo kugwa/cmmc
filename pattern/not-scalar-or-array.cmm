@@ -1,0 +1,8 @@
+int main(void) {
+	int arr[10];
+	int sca;
+	int test;
+	test = sca[10];
+	test = arr;
+	return 0;
+}

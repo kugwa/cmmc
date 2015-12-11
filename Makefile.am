@@ -2,7 +2,20 @@
 
 NULL =
 
-EXTRA_DIST = autogen.sh Makefile.simple
+EXTRA_DIST =				\
+	autogen.sh			\
+	Makefile.simple			\
+	pattern/int-div-by-zero.cmm	\
+	pattern/negative-array-size.cmm	\
+	pattern/not-constant.cmm	\
+	pattern/not-function.cmm	\
+	pattern/not-scalar-or-array.cmm	\
+	pattern/not-type.cmm		\
+	pattern/not-var.cmm		\
+	pattern/string-expr.cmm		\
+	pattern/void-expr.cmm		\
+	pattern/void-var-and-array.cmm	\
+	$(NULL)
 
 bin_PROGRAMS = parser
 noinst_LIBRARIES = libparser.a

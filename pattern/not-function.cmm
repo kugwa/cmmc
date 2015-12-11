@@ -1,0 +1,4 @@
+int var;
+int main(void) {
+	return var();
+}
