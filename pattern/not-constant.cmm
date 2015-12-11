@@ -2,8 +2,7 @@ int func(void) {
 	return 4;
 }
 
-typedef int tp[func() + 5];
-float gv[4 - func()];
+float gv = 4 - func();
 
 int main(void) {
 	return 0;
