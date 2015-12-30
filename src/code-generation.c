@@ -57,3 +57,5 @@ void ccmmc_code_generation(CcmmcState *state)
     ccmmc_symbol_table_reopen_scope(state->table);
     generate_program(state);
 }
+
+// vim: set sw=4 ts=4 sts=4 et:
