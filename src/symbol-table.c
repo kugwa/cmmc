@@ -23,6 +23,7 @@ void ccmmc_symbol_table_init(CcmmcSymbolTable *table)
 {
     table->all = NULL;
     table->all_last = NULL;
+    table->this_scope = NULL;
     table->current = NULL;
 }
 
@@ -43,6 +44,16 @@ void ccmmc_symbol_table_open_scope(CcmmcSymbolTable *table)
     scope->all_next = NULL;
     scope->current_next = table->current;
     table->current = scope;
+}
+
+// used by code-generation phase
+void ccmmc_symbol_table_reopen_scope(CcmmcSymbolTable *table)
+{
+    if (table->this_scope == NULL)
+        table->this_scope = table->all;
+    else
+        table->this_scope = table->this_scope->all_next;
+    table->current = table->this_scope;
 }
 
 // pop a scope from the stack

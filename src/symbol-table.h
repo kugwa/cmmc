@@ -45,8 +45,11 @@ typedef struct CcmmcSymbolScope_struct {
 } CcmmcSymbolScope;
 
 typedef struct CcmmcSymbolTable_struct {
+    // ro
     CcmmcSymbolScope *all;
     CcmmcSymbolScope *all_last;
+    // rw
+    CcmmcSymbolScope *this_scope;
     CcmmcSymbolScope *current;
 } CcmmcSymbolTable;
 
@@ -70,6 +73,7 @@ static inline bool ccmmc_symbol_is_function(CcmmcSymbol *symbol) {
 }
 
 void             ccmmc_symbol_table_open_scope      (CcmmcSymbolTable *table);
+void             ccmmc_symbol_table_reopen_scope    (CcmmcSymbolTable *table);
 void             ccmmc_symbol_table_close_scope     (CcmmcSymbolTable *table);
 void             ccmmc_symbol_table_init            (CcmmcSymbolTable *table);
 void             ccmmc_symbol_table_insert          (CcmmcSymbolTable *table,
