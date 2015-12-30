@@ -10,7 +10,7 @@ void ccmmc_state_init (CcmmcState *state)
     state->ast = NULL;
     state->table = NULL;
     state->line_number = 1;
-    state->any_error = false;
+    state->asm_output = NULL;
 }
 
 void ccmmc_state_fini (CcmmcState *state)
@@ -20,6 +20,9 @@ void ccmmc_state_fini (CcmmcState *state)
     }
     if (state->table != NULL) {
         // TODO: Free the symbol table
+    }
+    if (state->asm_output != NULL) {
+        fclose(state->asm_output);
     }
 }
 

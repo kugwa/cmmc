@@ -96,13 +96,12 @@ int main (int argc, char **argv)
     else
         exit(1);
 
-    FILE *asm_output = fopen("output.s", "w");
-    if (asm_output == NULL) {
+    state->asm_output = fopen("output.s", "w");
+    if (state->asm_output == NULL) {
         fprintf(stderr, "%s: output.s: %s\n", prog_name, ERR_MSG);
         exit(1);
     }
-    ccmmc_code_generation(state->ast, state->table, asm_output);
-    fclose(asm_output);
+    ccmmc_code_generation(state);
 
     ccmmc_state_fini(state);
     fclose(source_handle);

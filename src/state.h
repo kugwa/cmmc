@@ -6,13 +6,14 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdio.h>
 
 // All states of the compiler instance
 typedef struct CcmmcState_struct {
     CcmmcAst *ast;
     CcmmcSymbolTable *table;
     size_t line_number;
-    bool any_error;
+    FILE *asm_output;
 } CcmmcState;
 
 void             ccmmc_state_init                   (CcmmcState *state);

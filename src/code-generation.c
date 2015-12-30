@@ -8,6 +8,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-void ccmmc_code_generation(CcmmcAst *root, CcmmcSymbolTable *table, FILE *asm_output)
+void ccmmc_code_generation(CcmmcState *state)
 {
 }
