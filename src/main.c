@@ -5,6 +5,7 @@
 typedef void* yyscan_t;
 
 #include "ast.h"
+#include "code-generation.h"
 #include "common.h"
 #include "draw.h"
 #include "semantic-analysis.h"
@@ -94,6 +95,14 @@ int main (int argc, char **argv)
         puts("Parsing completed. No errors found.");
     else
         exit(1);
+
+    FILE *asm_output = fopen("output.s", "w");
+    if (asm_output == NULL) {
+        fprintf(stderr, "%s: output.s: %s\n", prog_name, ERR_MSG);
+        exit(1);
+    }
+    ccmmc_code_generation(state->ast, state->table, asm_output);
+    fclose(asm_output);
 
     ccmmc_state_fini(state);
     fclose(source_handle);

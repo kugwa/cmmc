@@ -29,6 +29,8 @@ parser_SOURCES =		\
 	src/common.h		\
 	src/ast.h		\
 	src/ast.c		\
+	src/code-generation.h	\
+	src/code-generation.c	\
 	src/draw.h		\
 	src/draw.c		\
 	src/semantic-analysis.h	\
