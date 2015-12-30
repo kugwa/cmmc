@@ -54,6 +54,8 @@ static void generate_program(CcmmcState *state)
 
 void ccmmc_code_generation(CcmmcState *state)
 {
+    state->table->this_scope = NULL;
+    state->table->current = NULL;
     ccmmc_symbol_table_reopen_scope(state->table);
     generate_program(state);
 }
