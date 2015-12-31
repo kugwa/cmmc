@@ -71,20 +71,20 @@ static void generate_global_variable(CcmmcAst *global_decl, CcmmcState *state)
 
 static void generate_block(
     CcmmcAst *block, CcmmcState *state, uint64_t current_offset);
-static uint64_t generate_statement(
+static void generate_statement(
     CcmmcAst *stmt, CcmmcState *state, uint64_t current_offset)
 {
     if (stmt->type_node == CCMMC_AST_NODE_NUL)
-        return current_offset;
+        return;
     if (stmt->type_node == CCMMC_AST_NODE_BLOCK) {
         generate_block(stmt, state, current_offset);
-        return current_offset;
+        return;
     }
 
     assert(stmt->type_node == CCMMC_AST_NODE_STMT);
     switch(stmt->value_stmt.kind) {
         case CCMMC_KIND_STMT_WHILE:
-            current_offset = generate_statement(stmt->child->right_sibling,
+            generate_statement(stmt->child->right_sibling,
                 state, current_offset);
             break;
         case CCMMC_KIND_STMT_FOR:
@@ -92,7 +92,7 @@ static uint64_t generate_statement(
         case CCMMC_KIND_STMT_ASSIGN:
             break;
         case CCMMC_KIND_STMT_IF:
-            current_offset = generate_statement(stmt->child->right_sibling,
+            generate_statement(stmt->child->right_sibling,
                 state, current_offset);
             break;
         case CCMMC_KIND_STMT_FUNCTION_CALL:
@@ -102,8 +102,6 @@ static uint64_t generate_statement(
         default:
             assert(false);
     }
-
-    return current_offset;
 }
 
 static uint64_t generate_local_variable(
@@ -144,20 +142,20 @@ static void generate_block(
 
     CcmmcAst *child = block->child;
     uint64_t orig_offset = current_offset;
+    uint64_t offset_diff = 0;
     if (child != NULL && child->type_node == CCMMC_AST_NODE_VARIABLE_DECL_LIST) {
         for (CcmmcAst *local = child->child; local != NULL; local = local->right_sibling)
             current_offset = generate_local_variable(local, state, current_offset);
-        fprintf(state->asm_output,
-            "\tsub\tsp, sp, #%" PRIu64 "\n", current_offset - orig_offset);
+        offset_diff = current_offset - orig_offset;
+        fprintf(state->asm_output, "\tsub\tsp, sp, #%" PRIu64 "\n", offset_diff);
         child = child->right_sibling;
     }
     if (child != NULL && child->type_node == CCMMC_AST_NODE_STMT_LIST) {
         for (CcmmcAst *stmt = child->child; stmt != NULL; stmt = stmt->right_sibling)
-            current_offset = generate_statement(stmt, state, current_offset);
+            generate_statement(stmt, state, current_offset);
     }
-    if (current_offset != orig_offset)
-        fprintf(state->asm_output,
-            "\tadd\tsp, sp, #%" PRIu64 "\n", current_offset - orig_offset);
+    if (offset_diff > 0)
+        fprintf(state->asm_output, "\tadd\tsp, sp, #%" PRIu64 "\n", offset_diff);
 
     ccmmc_symbol_table_close_scope(state->table);
 }
