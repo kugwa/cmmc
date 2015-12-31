@@ -155,7 +155,7 @@ static void generate_block(
             current_offset = generate_local_variable(local, state, current_offset);
         offset_diff = current_offset - orig_offset;
         if (offset_diff > 0) {
-            if (offset_diff >= 65536) {
+            if (offset_diff > 4096) {
                 CcmmcTmp *tmp = ccmmc_register_alloc(state->reg_pool);
                 const char *reg_name = ccmmc_register_lock(state->reg_pool, tmp);
                 fprintf(state->asm_output,
@@ -175,7 +175,7 @@ static void generate_block(
             generate_statement(stmt, state, current_offset);
     }
     if (offset_diff > 0) {
-        if (offset_diff >= 65536) {
+        if (offset_diff > 4096) {
             CcmmcTmp *tmp = ccmmc_register_alloc(state->reg_pool);
             const char *reg_name = ccmmc_register_lock(state->reg_pool, tmp);
             fprintf(state->asm_output,
