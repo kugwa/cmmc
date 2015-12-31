@@ -32,6 +32,7 @@ void             ccmmc_register_free                (CcmmcRegPool *pool,
                                                      CcmmcTmp *tmp);
 void             ccmmc_register_caller_save         (CcmmcRegPool *pool);
 void             ccmmc_register_caller_load         (CcmmcRegPool *pool);
+void             ccmmc_register_fini                (CcmmcRegPool *pool);
 
 #endif
 // vim: set sw=4 ts=4 sts=4 et:

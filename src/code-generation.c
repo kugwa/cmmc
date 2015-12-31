@@ -193,6 +193,7 @@ void ccmmc_code_generation(CcmmcState *state)
     state->table->this_scope = NULL;
     state->table->current = NULL;
     ccmmc_symbol_table_reopen_scope(state->table);
+    state->reg_pool = ccmmc_register_init();
     generate_program(state);
 }
 

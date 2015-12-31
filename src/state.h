@@ -3,6 +3,7 @@
 
 #include "ast.h"
 #include "symbol-table.h"
+#include "register.h"
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -14,6 +15,7 @@ typedef struct CcmmcState_struct {
     CcmmcSymbolTable *table;
     size_t line_number;
     FILE *asm_output;
+    CcmmcRegPool *reg_pool;
 } CcmmcState;
 
 void             ccmmc_state_init                   (CcmmcState *state);

@@ -115,3 +115,8 @@ void ccmmc_register_caller_save(CcmmcRegPool *pool)
 void ccmmc_register_caller_load(CcmmcRegPool *pool)
 {
 }
+
+void ccmmc_register_fini(CcmmcRegPool *pool)
+{
+    // TODO: free register pool
+}
