@@ -148,15 +148,40 @@ static void generate_block(
         for (CcmmcAst *local = child->child; local != NULL; local = local->right_sibling)
             current_offset = generate_local_variable(local, state, current_offset);
         offset_diff = current_offset - orig_offset;
-        fprintf(state->asm_output, "\tsub\tsp, sp, #%" PRIu64 "\n", offset_diff);
+        if (offset_diff > 0) {
+            if (offset_diff >= 65536) {
+                CcmmcTmp *tmp = ccmmc_register_alloc(state->reg_pool);
+                const char *reg_name = ccmmc_register_lock(state->reg_pool, tmp);
+                fprintf(state->asm_output,
+                    "\tldr\t%s, =%" PRIu64 "\n"
+                    "\tsub\tsp, sp, %s\n", reg_name, offset_diff, reg_name);
+                ccmmc_register_unlock(state->reg_pool, tmp);
+                ccmmc_register_free(state->reg_pool, tmp);
+            } else {
+                fprintf(state->asm_output, "\tsub\tsp, sp, #%" PRIu64 "\n",
+                    offset_diff);
+            }
+        }
         child = child->right_sibling;
     }
     if (child != NULL && child->type_node == CCMMC_AST_NODE_STMT_LIST) {
         for (CcmmcAst *stmt = child->child; stmt != NULL; stmt = stmt->right_sibling)
             generate_statement(stmt, state, current_offset);
     }
-    if (offset_diff > 0)
-        fprintf(state->asm_output, "\tadd\tsp, sp, #%" PRIu64 "\n", offset_diff);
+    if (offset_diff > 0) {
+        if (offset_diff >= 65536) {
+            CcmmcTmp *tmp = ccmmc_register_alloc(state->reg_pool);
+            const char *reg_name = ccmmc_register_lock(state->reg_pool, tmp);
+            fprintf(state->asm_output,
+                "\tldr\t%s, =%" PRIu64 "\n"
+                "\tadd\tsp, sp, %s\n", reg_name, offset_diff, reg_name);
+            ccmmc_register_unlock(state->reg_pool, tmp);
+            ccmmc_register_free(state->reg_pool, tmp);
+        } else {
+            fprintf(state->asm_output, "\tadd\tsp, sp, #%" PRIu64 "\n",
+                offset_diff);
+        }
+    }
 
     ccmmc_symbol_table_close_scope(state->table);
 }
