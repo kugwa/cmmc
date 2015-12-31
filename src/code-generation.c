@@ -44,8 +44,9 @@ static void generate_global_variable(CcmmcAst *global_decl, CcmmcState *state)
                     } else {
                         assert(false);
                     }
-                    fprintf(state->asm_output, "%s:\n\t.word\t%d\n",
-                        var_sym->name, int_value);
+                    fprintf(state->asm_output,
+                        "\t.global\t%s\n%s:\n\t.word\t%d\n",
+                        var_sym->name, var_sym->name, int_value);
                 } else if (var_sym->type.type_base == CCMMC_AST_VALUE_FLOAT) {
                     float float_value;
                     if (init_value->type_node == CCMMC_AST_NODE_CONST_VALUE) {
@@ -58,8 +59,9 @@ static void generate_global_variable(CcmmcAst *global_decl, CcmmcState *state)
                     } else {
                         assert(false);
                     }
-                    fprintf(state->asm_output, "%s:\n\t.float\t%.9g\n",
-                        var_sym->name, float_value);
+                    fprintf(state->asm_output,
+                        "\t.global\t%s\n%s:\n\t.float\t%.9g\n",
+                        var_sym->name, var_sym->name, float_value);
                 } else {
                     assert(false);
                 }
@@ -189,6 +191,9 @@ static void generate_block(
 static void generate_function(CcmmcAst *function, CcmmcState *state)
 {
     fputs("\t.text\n\t.align\t2\n", state->asm_output);
+    fprintf(state->asm_output, "\t.global\t%s\n%s:\n",
+        function->child->right_sibling->value_id.name,
+        function->child->right_sibling->value_id.name);
     CcmmcAst *param_node = function->child->right_sibling->right_sibling;
     CcmmcAst *block_node = param_node->right_sibling;
     generate_block(block_node, state, 0);
