@@ -803,6 +803,11 @@ static bool process_statement(CcmmcAst *stmt, CcmmcSymbolTable *table)
             any_error = check_relop_expr(stmt->child, table) || any_error;
             any_error = process_statement(stmt->child->right_sibling, table)
                 || any_error;
+            if (stmt->child->right_sibling->right_sibling->type_node
+                != CCMMC_AST_NODE_NUL)
+                    any_error = process_statement(
+                        stmt->child->right_sibling->right_sibling,
+                        table) || any_error;
             break;
         case CCMMC_KIND_STMT_FUNCTION_CALL:
             any_error = check_call(stmt, table) || any_error;
