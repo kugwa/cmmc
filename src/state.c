@@ -11,6 +11,7 @@ void ccmmc_state_init (CcmmcState *state)
     state->table = NULL;
     state->line_number = 1;
     state->asm_output = NULL;
+    state->reg_pool = NULL;
 }
 
 void ccmmc_state_fini (CcmmcState *state)
@@ -23,6 +24,9 @@ void ccmmc_state_fini (CcmmcState *state)
     }
     if (state->asm_output != NULL) {
         fclose(state->asm_output);
+    }
+    if (state->reg_pool != NULL) {
+        ccmmc_register_fini(state->reg_pool);
     }
 }
 

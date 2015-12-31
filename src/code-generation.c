@@ -225,6 +225,8 @@ void ccmmc_code_generation(CcmmcState *state)
     ccmmc_symbol_table_reopen_scope(state->table);
     state->reg_pool = ccmmc_register_init();
     generate_program(state);
+    ccmmc_register_fini(state->reg_pool);
+    state->reg_pool = NULL;
 }
 
 // vim: set sw=4 ts=4 sts=4 et:
