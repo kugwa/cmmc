@@ -33,6 +33,8 @@ parser_SOURCES =		\
 	src/code-generation.c	\
 	src/draw.h		\
 	src/draw.c		\
+	src/register.h		\
+	src/register.c		\
 	src/semantic-analysis.h	\
 	src/semantic-analysis.c	\
 	src/state.h		\

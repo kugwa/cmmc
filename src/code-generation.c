@@ -3,6 +3,7 @@
 #endif
 
 #include "code-generation.h"
+#include "register.h"
 
 #include <assert.h>
 #include <inttypes.h>
