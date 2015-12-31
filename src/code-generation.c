@@ -97,6 +97,10 @@ static void generate_statement(
         case CCMMC_KIND_STMT_IF:
             generate_statement(stmt->child->right_sibling,
                 state, current_offset);
+            if (stmt->child->right_sibling->right_sibling->type_node
+                != CCMMC_AST_NODE_NUL)
+                generate_statement(stmt->child->right_sibling->right_sibling,
+                    state, current_offset);
             break;
         case CCMMC_KIND_STMT_FUNCTION_CALL:
             break;
