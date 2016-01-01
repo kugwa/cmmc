@@ -208,7 +208,9 @@ static void generate_function(CcmmcAst *function, CcmmcState *state)
     fprintf(state->asm_output,
         "\t.type\t%s, %%function\n"
         "\t.global\t%s\n"
-        "%s:\n",
+        "%s:\n"
+        "\tstp\tlr, fp, [sp, -16]!\n"
+        "\tmov\tfp, sp\n",
         function->child->right_sibling->value_id.name,
         function->child->right_sibling->value_id.name,
         function->child->right_sibling->value_id.name);
@@ -216,6 +218,8 @@ static void generate_function(CcmmcAst *function, CcmmcState *state)
     CcmmcAst *block_node = param_node->right_sibling;
     generate_block(block_node, state, 0);
     fprintf(state->asm_output,
+        "\tldp\tlr, fp, [sp], 16\n"
+        "\tret\tlr\n"
         "\t.size\t%s, .-%s\n",
         function->child->right_sibling->value_id.name,
         function->child->right_sibling->value_id.name);
@@ -246,7 +250,9 @@ void ccmmc_code_generation(CcmmcState *state)
     state->table->current = NULL;
     ccmmc_symbol_table_reopen_scope(state->table);
     state->reg_pool = ccmmc_register_init(state->asm_output);
-    fputs("fp\t.req\tx30\n", state->asm_output);
+    fputs(
+        "fp\t.req\tx29\n"
+        "lr\t.req\tx30\n", state->asm_output);
     generate_program(state);
     ccmmc_register_fini(state->reg_pool);
     state->reg_pool = NULL;
