@@ -78,6 +78,10 @@ static void generate_global_variable(CcmmcAst *global_decl, CcmmcState *state)
     }
 }
 
+static inline bool safe_immediate(uint64_t imm) {
+    return imm <= 4096;
+}
+
 static void generate_block(
     CcmmcAst *block, CcmmcState *state, uint64_t current_offset);
 static void generate_statement(
@@ -161,7 +165,10 @@ static void generate_block(
             current_offset = generate_local_variable(local, state, current_offset);
         offset_diff = current_offset - orig_offset;
         if (offset_diff > 0) {
-            if (offset_diff > 4096) {
+            if (safe_immediate(offset_diff)) {
+                fprintf(state->asm_output, "\tsub\tsp, sp, #%" PRIu64 "\n",
+                    offset_diff);
+            } else {
                 CcmmcTmp *tmp = ccmmc_register_alloc(state->reg_pool, &current_offset);
                 const char *reg_name = ccmmc_register_lock(state->reg_pool, tmp);
                 fprintf(state->asm_output,
@@ -169,9 +176,6 @@ static void generate_block(
                     "\tsub\tsp, sp, %s\n", reg_name, offset_diff, reg_name);
                 ccmmc_register_unlock(state->reg_pool, tmp);
                 ccmmc_register_free(state->reg_pool, tmp, &current_offset);
-            } else {
-                fprintf(state->asm_output, "\tsub\tsp, sp, #%" PRIu64 "\n",
-                    offset_diff);
             }
         }
         child = child->right_sibling;
@@ -181,7 +185,10 @@ static void generate_block(
             generate_statement(stmt, state, current_offset);
     }
     if (offset_diff > 0) {
-        if (offset_diff > 4096) {
+        if (safe_immediate(offset_diff)) {
+            fprintf(state->asm_output, "\tadd\tsp, sp, #%" PRIu64 "\n",
+                offset_diff);
+        } else {
             CcmmcTmp *tmp = ccmmc_register_alloc(state->reg_pool, &current_offset);
             const char *reg_name = ccmmc_register_lock(state->reg_pool, tmp);
             fprintf(state->asm_output,
@@ -189,9 +196,6 @@ static void generate_block(
                 "\tadd\tsp, sp, %s\n", reg_name, offset_diff, reg_name);
             ccmmc_register_unlock(state->reg_pool, tmp);
             ccmmc_register_free(state->reg_pool, tmp, &current_offset);
-        } else {
-            fprintf(state->asm_output, "\tadd\tsp, sp, #%" PRIu64 "\n",
-                offset_diff);
         }
     }
 
