@@ -246,6 +246,7 @@ void ccmmc_code_generation(CcmmcState *state)
     state->table->current = NULL;
     ccmmc_symbol_table_reopen_scope(state->table);
     state->reg_pool = ccmmc_register_init(state->asm_output);
+    fputs("fp\t.req\tx30\n", state->asm_output);
     generate_program(state);
     ccmmc_register_fini(state->reg_pool);
     state->reg_pool = NULL;
