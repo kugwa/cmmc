@@ -1,21 +1,21 @@
 #include "register.h"
 
 #include <assert.h>
+#include <inttypes.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 #define REG_NUM 6
 #define REG_RESERVED "x9"
 #define REG_LOCK_MAX 3
+#define REG_SIZE 8
+#define SPILL_MAX 64
 
 static const char *reg_name[REG_NUM] = {
     "x10", "x11", "x12", "x13", "x14", "x15"};
 
-/* static void mov(CcmmcTmp *a, CcmmcTmp *b)
-{
-} */
-
-CcmmcRegPool *ccmmc_register_init(void)
+CcmmcRegPool *ccmmc_register_init(FILE *asm_output)
 {
     CcmmcRegPool *pool = malloc(sizeof(CcmmcRegPool));
     pool->num = REG_NUM;
@@ -26,26 +26,43 @@ CcmmcRegPool *ccmmc_register_init(void)
         pool->list[i]->lock = 0;
         pool->list[i]->name = reg_name[i];
     }
+    pool->spill = malloc(sizeof(CcmmcTmp*) * SPILL_MAX);
+    pool->top = 0;
     pool->lock_max = REG_LOCK_MAX;
     pool->lock_cnt = 0;
-    pool->top = 0;
-    pool->exceed = 0;
+    pool->asm_output = asm_output;
     return pool;
 }
 
-CcmmcTmp *ccmmc_register_alloc(CcmmcRegPool *pool)
+CcmmcTmp *ccmmc_register_alloc(CcmmcRegPool *pool, uint64_t *offset)
 {
     CcmmcTmp *tmp = malloc(sizeof(CcmmcTmp));
     if (pool->top < pool->num) {
-        tmp->reg = pool->list[pool->top];
+        // tmp
         tmp->addr = 0;
+        tmp->reg = pool->list[pool->top];
+
+        // reg
         tmp->reg->tmp = tmp;
+        tmp->reg->lock = 0;
+
+        // pool
         pool->top++;
     }
     else {
+        // gen code to alloc space on the stack
+        fprintf(pool->asm_output, "\tsub\tsp, sp, #%d\n", REG_SIZE);
+
+        // tmp and offset
+        *offset += REG_SIZE;
+        tmp->addr = *offset;
         tmp->reg = NULL;
-        tmp->addr = (pool->exceed + 1) * (-8); // TODO: assign an offset for original tmp
-        pool->exceed++;
+
+        // spill
+        pool->spill[pool->top - pool->num] = tmp;
+
+        // pool
+        pool->top++;
     }
     return tmp;
 }
@@ -56,26 +73,49 @@ const char *ccmmc_register_lock(CcmmcRegPool *pool, CcmmcTmp *tmp)
     if (pool->lock_cnt < pool->lock_max) {
         if (tmp->reg !=NULL) {
             if (tmp->reg->lock == 0) {
+                // reg
                 tmp->reg->lock = 1;
+
+                // pool
                 pool->lock_cnt++;
             }
             reg = tmp->reg->name;
         }
-        else { // find a unlocked reg
-            int i;
+        else {
+            // find a unlocked reg
+            int i, j;
             for (i = 0; i < pool->num && pool->list[i]->lock == 1; i++);
+            assert(i < pool->num); //must found
 
-            // TODO: mov REG_RESERVED, pool->list[i]->name
-            // TODO: ldr pool->list[i]->name, tmp->addr
-            // TODO: str REG_RESERVED, tmp->addr
+            // gen code to swap the tmp in the register and the tmp on the stack
+            fprintf(pool->asm_output, "\tmov\t%s, %s\n", REG_RESERVED,
+                pool->list[i]->name);
+            fprintf(pool->asm_output, "\tldr\t%s, [fp - #%" PRIu64 "]\n",
+                pool->list[i]->name, tmp->addr);
+            fprintf(pool->asm_output, "\tstr\t%s, [fp - #%" PRIu64 "]\n",
+                REG_RESERVED, tmp->addr);
 
+            // find the index of tmp in pool->spill
+            for (j = 0; j < pool->top - pool->num && pool->spill[j] != tmp; j++);
+
+            // spill
+            pool->spill[j] = pool->list[i]->tmp;
+
+            // old tmp of the reg
             pool->list[i]->tmp->reg = NULL;
             pool->list[i]->tmp->addr = tmp->addr;
+
+            // tmp
             tmp->reg = pool->list[i];
             tmp->addr = 0;
 
+            // register
+            tmp->reg->tmp = tmp;
             tmp->reg->lock = 1;
+
+            // pool
             pool->lock_cnt++;
+
             reg = tmp->reg->name;
         }
     }
@@ -85,26 +125,60 @@ const char *ccmmc_register_lock(CcmmcRegPool *pool, CcmmcTmp *tmp)
 void ccmmc_register_unlock(CcmmcRegPool *pool, CcmmcTmp *tmp)
 {
     if (tmp->reg != NULL && tmp->reg->lock == 1) {
+        // reg
         tmp->reg->lock = 0;
+
+        // pool
         pool->lock_cnt--;
     }
 }
 
-void ccmmc_register_free(CcmmcRegPool *pool, CcmmcTmp *tmp)
+void ccmmc_register_free(CcmmcRegPool *pool, CcmmcTmp *tmp, uint64_t *offset)
 {
-    if (pool->exceed == 0) {
-        int i;
-        for (i = 0; i < pool->num && pool->list[i] != tmp->reg; i++);
-        if (i < pool->top - 1) {
-            CcmmcReg *swap = pool->list[i];
-            pool->list[i] = pool->list[pool->top - 1];
-            pool->list[pool->top - 1] = swap;
-        }
-        pool->top--;
+    // find the index of register associated with tmp
+    int i;
+    for (i = 0; i < pool->num && pool->list[i] != tmp->reg; i++);
+
+    if (pool->top <= pool->num) {
+        // tmp
         free(tmp);
+
+        // pool
+        pool->top--;
+        assert(i < pool->num); //must found
+        if (i < pool->top) {
+            CcmmcReg *swap = pool->list[i];
+            pool->list[i] = pool->list[pool->top];
+            pool->list[pool->top] = swap;
+        }
     }
     else {
-        assert(false);
+        if (i < pool->num) {
+            // pool
+            pool->top--;
+
+            // gen code to move the last tmp to this register
+            fprintf(pool->asm_output, "\tldr\t%s, [fp - #%" PRIu64 "]\n",
+                tmp->reg->name, pool->spill[pool->top - pool->num]->addr);
+            fprintf(pool->asm_output, "\tadd\tsp, sp, #%d\n", REG_SIZE);
+
+            // offset
+            *offset -= REG_SIZE;
+
+            // reg
+            tmp->reg->tmp = pool->spill[pool->top - pool->num];
+
+            // the last tmp
+            tmp->reg->tmp->reg = tmp->reg;
+            tmp->reg->tmp->addr = 0;
+
+            // tmp
+            free(tmp);
+        }
+        else {
+            // tmp is on the stack, not handled
+            assert(false);
+        }
     }
 }
 

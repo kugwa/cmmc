@@ -156,13 +156,13 @@ static void generate_block(
         offset_diff = current_offset - orig_offset;
         if (offset_diff > 0) {
             if (offset_diff > 4096) {
-                CcmmcTmp *tmp = ccmmc_register_alloc(state->reg_pool);
+                CcmmcTmp *tmp = ccmmc_register_alloc(state->reg_pool, &current_offset);
                 const char *reg_name = ccmmc_register_lock(state->reg_pool, tmp);
                 fprintf(state->asm_output,
                     "\tldr\t%s, =%" PRIu64 "\n"
                     "\tsub\tsp, sp, %s\n", reg_name, offset_diff, reg_name);
                 ccmmc_register_unlock(state->reg_pool, tmp);
-                ccmmc_register_free(state->reg_pool, tmp);
+                ccmmc_register_free(state->reg_pool, tmp, &current_offset);
             } else {
                 fprintf(state->asm_output, "\tsub\tsp, sp, #%" PRIu64 "\n",
                     offset_diff);
@@ -176,13 +176,13 @@ static void generate_block(
     }
     if (offset_diff > 0) {
         if (offset_diff > 4096) {
-            CcmmcTmp *tmp = ccmmc_register_alloc(state->reg_pool);
+            CcmmcTmp *tmp = ccmmc_register_alloc(state->reg_pool, &current_offset);
             const char *reg_name = ccmmc_register_lock(state->reg_pool, tmp);
             fprintf(state->asm_output,
                 "\tldr\t%s, =%" PRIu64 "\n"
                 "\tadd\tsp, sp, %s\n", reg_name, offset_diff, reg_name);
             ccmmc_register_unlock(state->reg_pool, tmp);
-            ccmmc_register_free(state->reg_pool, tmp);
+            ccmmc_register_free(state->reg_pool, tmp, &current_offset);
         } else {
             fprintf(state->asm_output, "\tadd\tsp, sp, #%" PRIu64 "\n",
                 offset_diff);
@@ -227,7 +227,7 @@ void ccmmc_code_generation(CcmmcState *state)
     state->table->this_scope = NULL;
     state->table->current = NULL;
     ccmmc_symbol_table_reopen_scope(state->table);
-    state->reg_pool = ccmmc_register_init();
+    state->reg_pool = ccmmc_register_init(state->asm_output);
     generate_program(state);
     ccmmc_register_fini(state->reg_pool);
     state->reg_pool = NULL;
