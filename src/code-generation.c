@@ -31,7 +31,11 @@ static void generate_global_variable(CcmmcAst *global_decl, CcmmcState *state)
                 } break;
             case CCMMC_KIND_ID_WITH_INIT: {
                 CcmmcAst *init_value = var_decl->child;
-                fprintf(state->asm_output, "\t.size\t%s, 4\n", var_sym->name);
+                fprintf(state->asm_output,
+                    "\t.type\t%s, %%object\n"
+                    "\t.size\t%s, 4\n"
+                    "\t.global\t%s\n",
+                    var_sym->name, var_sym->name, var_sym->name);
                 if (var_sym->type.type_base == CCMMC_AST_VALUE_INT) {
                     int int_value;
                     if (init_value->type_node == CCMMC_AST_NODE_CONST_VALUE) {
@@ -45,8 +49,9 @@ static void generate_global_variable(CcmmcAst *global_decl, CcmmcState *state)
                         assert(false);
                     }
                     fprintf(state->asm_output,
-                        "\t.global\t%s\n%s:\n\t.word\t%d\n",
-                        var_sym->name, var_sym->name, int_value);
+                        "%s:\n"
+                        "\t.word\t%d\n",
+                        var_sym->name, int_value);
                 } else if (var_sym->type.type_base == CCMMC_AST_VALUE_FLOAT) {
                     float float_value;
                     if (init_value->type_node == CCMMC_AST_NODE_CONST_VALUE) {
@@ -60,8 +65,9 @@ static void generate_global_variable(CcmmcAst *global_decl, CcmmcState *state)
                         assert(false);
                     }
                     fprintf(state->asm_output,
-                        "\t.global\t%s\n%s:\n\t.float\t%.9g\n",
-                        var_sym->name, var_sym->name, float_value);
+                        "%s:\n"
+                        "\t.float\t%.9g\n",
+                       var_sym->name, float_value);
                 } else {
                     assert(false);
                 }
@@ -195,12 +201,20 @@ static void generate_block(
 static void generate_function(CcmmcAst *function, CcmmcState *state)
 {
     fputs("\t.text\n\t.align\t2\n", state->asm_output);
-    fprintf(state->asm_output, "\t.global\t%s\n%s:\n",
+    fprintf(state->asm_output,
+        "\t.type\t%s, %%function\n"
+        "\t.global\t%s\n"
+        "%s:\n",
+        function->child->right_sibling->value_id.name,
         function->child->right_sibling->value_id.name,
         function->child->right_sibling->value_id.name);
     CcmmcAst *param_node = function->child->right_sibling->right_sibling;
     CcmmcAst *block_node = param_node->right_sibling;
     generate_block(block_node, state, 0);
+    fprintf(state->asm_output,
+        "\t.size\t%s, .-%s\n",
+        function->child->right_sibling->value_id.name,
+        function->child->right_sibling->value_id.name);
 }
 
 static void generate_program(CcmmcState *state)
