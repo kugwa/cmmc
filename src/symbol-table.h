@@ -71,6 +71,12 @@ static inline bool ccmmc_symbol_is_array(CcmmcSymbol *symbol) {
 static inline bool ccmmc_symbol_is_function(CcmmcSymbol *symbol) {
     return ccmmc_symbol_type_is_function(symbol->type);
 }
+static inline bool ccmmc_symbol_attr_is_global(CcmmcSymbolAttr *attr) {
+    return attr->addr == 0;
+}
+static inline bool ccmmc_symbol_attr_is_local(CcmmcSymbolAttr *attr) {
+    return attr->addr != 0;
+}
 
 void             ccmmc_symbol_table_open_scope      (CcmmcSymbolTable *table);
 void             ccmmc_symbol_table_reopen_scope    (CcmmcSymbolTable *table);

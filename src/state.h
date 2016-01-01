@@ -16,6 +16,7 @@ typedef struct CcmmcState_struct {
     size_t line_number;
     FILE *asm_output;
     CcmmcRegPool *reg_pool;
+    size_t label_number;
 } CcmmcState;
 
 void             ccmmc_state_init                   (CcmmcState *state);

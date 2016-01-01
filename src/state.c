@@ -12,6 +12,7 @@ void ccmmc_state_init (CcmmcState *state)
     state->line_number = 1;
     state->asm_output = NULL;
     state->reg_pool = NULL;
+    state->label_number = 0;
 }
 
 void ccmmc_state_fini (CcmmcState *state)

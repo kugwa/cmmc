@@ -13,7 +13,7 @@
 #define SPILL_MAX 64
 
 static const char *reg_name[REG_NUM] = {
-    "x10", "x11", "x12", "x13", "x14", "x15"};
+    "w10", "w11", "w12", "w13", "w14", "w15"};
 
 CcmmcRegPool *ccmmc_register_init(FILE *asm_output)
 {
