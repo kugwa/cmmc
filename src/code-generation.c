@@ -619,8 +619,9 @@ static void generate_program(CcmmcState *state)
             case CCMMC_KIND_DECL_FUNCTION:
                 generate_function(global_decl, state);
                 break;
-            case CCMMC_KIND_DECL_FUNCTION_PARAMETER:
             case CCMMC_KIND_DECL_TYPE:
+                break;
+            case CCMMC_KIND_DECL_FUNCTION_PARAMETER:
             default:
                 assert(false);
         }
