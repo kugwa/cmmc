@@ -403,7 +403,7 @@ static void generate_expression(CcmmcAst *expr, CcmmcState *state,
                 break;
             case CCMMC_KIND_OP_UNARY_NEGATIVE:
                 if (arg->type_value == CCMMC_AST_VALUE_FLOAT)
-                    fprintf(state->asm_output, "\tfneg\t%s, %s\n", FPREG_RESULT, op1);
+                    fprintf(state->asm_output, "\tfneg\t%s, %s\n", FPREG_RESULT, FPREG_OP1);
                 else
                     fprintf(state->asm_output, "\tneg\t%s, %s\n", result, op1);
                 break;
