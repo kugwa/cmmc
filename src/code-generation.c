@@ -500,6 +500,9 @@ static void generate_statement(
                     state, current_offset);
             break;
         case CCMMC_KIND_STMT_FUNCTION_CALL:
+            ccmmc_register_caller_save(state->reg_pool);
+            fprintf(state->asm_output, "\tbl\t%s\n", stmt->child->value_id.name);
+            ccmmc_register_caller_load(state->reg_pool);
             break;
         case CCMMC_KIND_STMT_RETURN:
             break;

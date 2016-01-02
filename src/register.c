@@ -9,7 +9,7 @@
 #define REG_NUM 6
 #define REG_RESERVED "x9"
 #define REG_LOCK_MAX 3
-#define REG_SIZE 8
+#define REG_SIZE 4
 #define SPILL_MAX 64
 
 static const char *reg_name[REG_NUM] = {
@@ -184,10 +184,20 @@ void ccmmc_register_free(CcmmcRegPool *pool, CcmmcTmp *tmp, uint64_t *offset)
 
 void ccmmc_register_caller_save(CcmmcRegPool *pool)
 {
+    for (int i = 0; i < REG_NUM; i++)
+        fprintf(pool->asm_output, "\tstr\t%s, [sp - #%d]\n",
+            reg_name[i],
+            (i + 1) * REG_SIZE);
+    fprintf(pool->asm_output, "\tsub\tsp, sp, %d\n", REG_NUM * REG_SIZE);
 }
 
 void ccmmc_register_caller_load(CcmmcRegPool *pool)
 {
+    fprintf(pool->asm_output, "\tadd\tsp, sp, %d\n", REG_NUM * REG_SIZE);
+    for (int i = 0; i < REG_NUM; i++)
+        fprintf(pool->asm_output, "\tldr\t%s, [sp - #%d]\n",
+            reg_name[i],
+            (i + 1) * REG_SIZE);
 }
 
 void ccmmc_register_fini(CcmmcRegPool *pool)
