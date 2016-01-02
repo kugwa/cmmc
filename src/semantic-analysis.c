@@ -816,7 +816,7 @@ static bool process_statement(CcmmcAst *stmt, CcmmcSymbolTable *table)
         case CCMMC_KIND_STMT_RETURN:
             for (CcmmcAst *func = stmt->parent; ; func = func->parent) {
                 if (func->type_node == CCMMC_AST_NODE_DECL &&
-                        func->value_decl.kind == CCMMC_KIND_DECL_FUNCTION) {
+                    func->value_decl.kind == CCMMC_KIND_DECL_FUNCTION) {
                     func_sym = ccmmc_symbol_table_retrieve(table,
                         func->child->right_sibling->value_id.name);
                     break;
