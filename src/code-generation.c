@@ -634,6 +634,16 @@ static void generate_statement(
                         state, current_offset, "w0");
                     if (func_type == CCMMC_AST_VALUE_FLOAT)
                         fputs("\tfmov\ts0, w0\n", state->asm_output);
+                    // XXX: We should fix the location of the return label
+                    // instead of copying code and modifying sp here.
+                    if (safe_immediate(current_offset)) {
+                        fprintf(state->asm_output, "\tadd\tsp, sp, #%" PRIu64 "\n",
+                            current_offset);
+                    } else {
+                        fprintf(state->asm_output,
+                            "\tldr\t%s, =%" PRIu64 "\n"
+                            "\tadd\tsp, sp, %s\n", "x9", current_offset, "x9");
+                    }
                     fprintf(state->asm_output, "\tb\t.LR_%s\n", func_name);
                     break;
                 }
