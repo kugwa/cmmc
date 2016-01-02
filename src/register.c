@@ -90,9 +90,9 @@ const char *ccmmc_register_lock(CcmmcRegPool *pool, CcmmcTmp *tmp)
             // gen code to swap the tmp in the register and the tmp on the stack
             fprintf(pool->asm_output, "\tmov\t%s, %s\n", REG_RESERVED,
                 pool->list[i]->name);
-            fprintf(pool->asm_output, "\tldr\t%s, [fp - #%" PRIu64 "]\n",
+            fprintf(pool->asm_output, "\tldr\t%s, [fp, #-%" PRIu64 "]\n",
                 pool->list[i]->name, tmp->addr);
-            fprintf(pool->asm_output, "\tstr\t%s, [fp - #%" PRIu64 "]\n",
+            fprintf(pool->asm_output, "\tstr\t%s, [fp, #-%" PRIu64 "]\n",
                 REG_RESERVED, tmp->addr);
 
             // find the index of tmp in pool->spill
@@ -158,7 +158,7 @@ void ccmmc_register_free(CcmmcRegPool *pool, CcmmcTmp *tmp, uint64_t *offset)
             pool->top--;
 
             // gen code to move the last tmp to this register
-            fprintf(pool->asm_output, "\tldr\t%s, [fp - #%" PRIu64 "]\n",
+            fprintf(pool->asm_output, "\tldr\t%s, [fp, #-%" PRIu64 "]\n",
                 tmp->reg->name, pool->spill[pool->top - pool->num]->addr);
             fprintf(pool->asm_output, "\tadd\tsp, sp, #%d\n", REG_SIZE);
 
@@ -185,7 +185,7 @@ void ccmmc_register_free(CcmmcRegPool *pool, CcmmcTmp *tmp, uint64_t *offset)
 void ccmmc_register_caller_save(CcmmcRegPool *pool)
 {
     for (int i = 0; i < REG_NUM; i++)
-        fprintf(pool->asm_output, "\tstr\t%s, [sp - #%d]\n",
+        fprintf(pool->asm_output, "\tstr\t%s, [sp, #-%d]\n",
             reg_name[i],
             (i + 1) * REG_SIZE);
     fprintf(pool->asm_output, "\tsub\tsp, sp, %d\n", REG_NUM * REG_SIZE);
@@ -195,7 +195,7 @@ void ccmmc_register_caller_load(CcmmcRegPool *pool)
 {
     fprintf(pool->asm_output, "\tadd\tsp, sp, %d\n", REG_NUM * REG_SIZE);
     for (int i = 0; i < REG_NUM; i++)
-        fprintf(pool->asm_output, "\tldr\t%s, [sp - #%d]\n",
+        fprintf(pool->asm_output, "\tldr\t%s, [sp, #-%d]\n",
             reg_name[i],
             (i + 1) * REG_SIZE);
 }
