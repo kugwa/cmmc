@@ -261,7 +261,7 @@ static void generate_expression(CcmmcAst *expr, CcmmcState *state,
                     fprintf(state->asm_output, "\tfdiv\t%s, %s, %s\n",
                         FPREG_RESULT, FPREG_OP1, FPREG_OP2);
                 else
-                    fprintf(state->asm_output, "\tdiv\t%s, %s, %s\n",
+                    fprintf(state->asm_output, "\tsdiv\t%s, %s, %s\n",
                         result, op1, op2);
                 break;
             case CCMMC_KIND_OP_BINARY_EQ:
