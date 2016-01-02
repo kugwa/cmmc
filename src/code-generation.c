@@ -515,6 +515,7 @@ static void generate_statement(
             const char *op1 = ccmmc_register_lock(state->reg_pool, tmp2);
             const char *op2 = ccmmc_register_lock(state->reg_pool, tmp3);
 
+            // while condition
             fprintf(state->asm_output, ".LC%zu\n", label_cmp);
             generate_expression(stmt->child, state, result, op1, op2);
             if (stmt->child->type_value == CCMMC_AST_VALUE_FLOAT)
@@ -537,6 +538,8 @@ static void generate_statement(
             ccmmc_register_free(state->reg_pool, tmp1, &current_offset);
             ccmmc_register_free(state->reg_pool, tmp2, &current_offset);
             ccmmc_register_free(state->reg_pool, tmp3, &current_offset);
+
+            // while body
             generate_statement(stmt->child->right_sibling,
                 state, current_offset);
             fprintf(state->asm_output,
@@ -552,14 +555,64 @@ static void generate_statement(
             calc_and_save_expression_result(stmt->child,
                 stmt->child->right_sibling, state, current_offset);
             break;
-        case CCMMC_KIND_STMT_IF:
+        case CCMMC_KIND_STMT_IF: {
+#define FPREG_TMP  "s16"
+            size_t label_cross_if = state->label_number++;
+            CcmmcTmp *tmp1 = ccmmc_register_alloc(state->reg_pool, &current_offset);
+            CcmmcTmp *tmp2 = ccmmc_register_alloc(state->reg_pool, &current_offset);
+            CcmmcTmp *tmp3 = ccmmc_register_alloc(state->reg_pool, &current_offset);
+            const char *result = ccmmc_register_lock(state->reg_pool, tmp1);
+            const char *op1 = ccmmc_register_lock(state->reg_pool, tmp2);
+            const char *op2 = ccmmc_register_lock(state->reg_pool, tmp3);
+
+            // if condition
+            generate_expression(stmt->child, state, result, op1, op2);
+            if (stmt->child->type_value == CCMMC_AST_VALUE_FLOAT)
+                fprintf(state->asm_output,
+                    "\tfmov\t%s, %s\n"
+                    "\tfcmp\t%s, #0.0\n"
+                    "\tb.e\t.LC%zu\n",
+                    FPREG_TMP,
+                    result,
+                    FPREG_TMP,
+                    label_cross_if);
+            else
+                fprintf(state->asm_output,
+                    "\tcbz\t%s, .LC%zu\n",
+                    result,
+                    label_cross_if);
+            ccmmc_register_unlock(state->reg_pool, tmp1);
+            ccmmc_register_unlock(state->reg_pool, tmp2);
+            ccmmc_register_unlock(state->reg_pool, tmp3);
+            ccmmc_register_free(state->reg_pool, tmp1, &current_offset);
+            ccmmc_register_free(state->reg_pool, tmp2, &current_offset);
+            ccmmc_register_free(state->reg_pool, tmp3, &current_offset);
+
+            // if body
             generate_statement(stmt->child->right_sibling,
                 state, current_offset);
+
             if (stmt->child->right_sibling->right_sibling->type_node
-                != CCMMC_AST_NODE_NUL)
+                == CCMMC_AST_NODE_NUL) {
+                // no else
+                fprintf(state->asm_output, ".LC%zu\n", label_cross_if);
+            }
+            else {
+                // jump across else
+                size_t label_exit = state->label_number++;
+                fprintf(state->asm_output,
+                    "\tb\t.LC%zu\n"
+                    ".LC%zu\n",
+                    label_exit,
+                    label_cross_if);
+
+                // else body
                 generate_statement(stmt->child->right_sibling->right_sibling,
                     state, current_offset);
-            break;
+                fprintf(state->asm_output, ".LC%zu\n", label_exit);
+#undef FPREG_TMP
+            }
+            } break;
         case CCMMC_KIND_STMT_FUNCTION_CALL:
             ccmmc_register_caller_save(state->reg_pool);
             fprintf(state->asm_output, "\tbl\t%s\n", stmt->child->value_id.name);
