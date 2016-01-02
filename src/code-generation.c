@@ -148,10 +148,17 @@ static void generate_expression(CcmmcAst *expr, CcmmcState *state,
 
     if (expr->type_node == CCMMC_AST_NODE_STMT &&
         expr->value_stmt.kind == CCMMC_KIND_STMT_FUNCTION_CALL) {
+        const char *func_name = expr->child->value_id.name;
+        CcmmcSymbol *func_sym = ccmmc_symbol_table_retrieve(
+            state->table, func_name);
+        CcmmcAstValueType func_type = func_sym->type.type_base;
         ccmmc_register_caller_save(state->reg_pool);
-        fprintf(state->asm_output, "\tbl\t%s\n", expr->child->value_id.name);
+        fprintf(state->asm_output, "\tbl\t%s\n", func_name);
         ccmmc_register_caller_load(state->reg_pool);
-        fprintf(state->asm_output, "\tmov\t%s, w0\n", result);
+        if (func_type == CCMMC_AST_VALUE_FLOAT)
+            fprintf(state->asm_output, "\tfmov\t%s, s0\n", result);
+        else
+            fprintf(state->asm_output, "\tmov\t%s, w0\n", result);
         return ;
     }
 
