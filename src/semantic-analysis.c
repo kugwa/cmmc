@@ -670,6 +670,7 @@ static bool decl_variable(
                 init_id->line_number, var_str);
             continue;
         }
+        init_id->type_value = type_sym->type.type_base;
         switch (init_id->value_id.kind) {
             case CCMMC_KIND_ID_NORMAL:
                 ccmmc_symbol_table_insert(table,
