@@ -148,7 +148,10 @@ static void generate_expression(CcmmcAst *expr, CcmmcState *state,
 
     if (expr->type_node == CCMMC_AST_NODE_STMT &&
         expr->value_stmt.kind == CCMMC_KIND_STMT_FUNCTION_CALL) {
-        // TODO: function call
+        ccmmc_register_caller_save(state->reg_pool);
+        fprintf(state->asm_output, "\tbl\t%s\n", expr->child->value_id.name);
+        ccmmc_register_caller_load(state->reg_pool);
+        fprintf(state->asm_output, "\tmov\t%s, w0\n", result);
         assert(false);
     }
 
