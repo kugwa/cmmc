@@ -484,10 +484,42 @@ static void generate_statement(
 
     assert(stmt->type_node == CCMMC_AST_NODE_STMT);
     switch(stmt->value_stmt.kind) {
-        case CCMMC_KIND_STMT_WHILE:
+        case CCMMC_KIND_STMT_WHILE: {
+#define FPREG_TMP  "s16"
+            size_t label_cmp = state->label_number++;
+            size_t label_exit = state->label_number++;
+            CcmmcTmp *tmp1 = ccmmc_register_alloc(state->reg_pool, &current_offset);
+            CcmmcTmp *tmp2 = ccmmc_register_alloc(state->reg_pool, &current_offset);
+            CcmmcTmp *tmp3 = ccmmc_register_alloc(state->reg_pool, &current_offset);
+            const char *result = ccmmc_register_lock(state->reg_pool, tmp1);
+            const char *op1 = ccmmc_register_lock(state->reg_pool, tmp2);
+            const char *op2 = ccmmc_register_lock(state->reg_pool, tmp3);
+
+            fprintf(state->asm_output, ".LC%zu\n", label_cmp);
+            generate_expression(stmt->child, state, result, op1, op2);
+            if (stmt->child->type_value == CCMMC_AST_VALUE_FLOAT)
+                fprintf(state->asm_output,
+                    "\tfmov\t%s, %s\n"
+                    "\tfcmp\t%s, #0.0\n"
+                    "\tb.e\t.LC%zu\n",
+                    FPREG_TMP,
+                    result,
+                    FPREG_TMP,
+                    label_exit);
+            else
+                fprintf(state->asm_output,
+                    "\tcbz\t%s, .LC%zu\n",
+                    result,
+                    label_exit);
             generate_statement(stmt->child->right_sibling,
                 state, current_offset);
-            break;
+            fprintf(state->asm_output,
+                "\tb\t.LC%zu\n"
+                ".LC%zu\n",
+                label_cmp,
+                label_exit);
+#undef FPREG_TMP
+            } break;
         case CCMMC_KIND_STMT_FOR:
             break;
         case CCMMC_KIND_STMT_ASSIGN: {
