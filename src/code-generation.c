@@ -430,6 +430,43 @@ static void generate_expression(CcmmcAst *expr, CcmmcState *state,
     assert(false);
 }
 
+static void calc_and_save_expression_result(CcmmcAst *lvar, CcmmcAst *expr,
+    CcmmcState *state, uint64_t current_offset)
+{
+#define FPREG_TMP  "s16"
+    CcmmcTmp *tmp1 = ccmmc_register_alloc(state->reg_pool, &current_offset);
+    CcmmcTmp *tmp2 = ccmmc_register_alloc(state->reg_pool, &current_offset);
+    CcmmcTmp *tmp3 = ccmmc_register_alloc(state->reg_pool, &current_offset);
+    const char *result = ccmmc_register_lock(state->reg_pool, tmp1);
+    const char *op1 = ccmmc_register_lock(state->reg_pool, tmp2);
+    const char *op2 = ccmmc_register_lock(state->reg_pool, tmp3);
+    generate_expression(expr, state, result, op1, op2);
+    if (lvar->type_value == CCMMC_AST_VALUE_INT &&
+        expr->type_value == CCMMC_AST_VALUE_FLOAT) {
+        fprintf(state->asm_output,
+            "\tfmov\t%s, %s\n"
+            "\tfcvtas\t%s, %s\n",
+            FPREG_TMP, result,
+            result, FPREG_TMP);
+    } else if (
+        lvar->type_value == CCMMC_AST_VALUE_FLOAT &&
+        expr->type_value == CCMMC_AST_VALUE_INT) {
+        fprintf(state->asm_output,
+            "\tscvtf\t%s, %s\n"
+            "\tfmov\t%s, %s\n",
+            FPREG_TMP, result,
+            result, FPREG_TMP);
+    }
+    store_variable(lvar, state, result);
+    ccmmc_register_unlock(state->reg_pool, tmp1);
+    ccmmc_register_unlock(state->reg_pool, tmp2);
+    ccmmc_register_unlock(state->reg_pool, tmp3);
+    ccmmc_register_free(state->reg_pool, tmp1, &current_offset);
+    ccmmc_register_free(state->reg_pool, tmp2, &current_offset);
+    ccmmc_register_free(state->reg_pool, tmp3, &current_offset);
+#undef FPREG_TMP
+}
+
 static void generate_block(
     CcmmcAst *block, CcmmcState *state, uint64_t current_offset);
 static void generate_statement(
@@ -451,40 +488,8 @@ static void generate_statement(
         case CCMMC_KIND_STMT_FOR:
             break;
         case CCMMC_KIND_STMT_ASSIGN: {
-#define FPREG_TMP  "s16"
-            CcmmcTmp *tmp1 = ccmmc_register_alloc(state->reg_pool, &current_offset);
-            CcmmcTmp *tmp2 = ccmmc_register_alloc(state->reg_pool, &current_offset);
-            CcmmcTmp *tmp3 = ccmmc_register_alloc(state->reg_pool, &current_offset);
-            const char *result = ccmmc_register_lock(state->reg_pool, tmp1);
-            const char *op1 = ccmmc_register_lock(state->reg_pool, tmp2);
-            const char *op2 = ccmmc_register_lock(state->reg_pool, tmp3);
-            CcmmcAst *lvar = stmt->child;
-            CcmmcAst *expr = stmt->child->right_sibling;
-            generate_expression(expr, state, result, op1, op2);
-            if (lvar->type_value == CCMMC_AST_VALUE_INT &&
-                expr->type_value == CCMMC_AST_VALUE_FLOAT) {
-                fprintf(state->asm_output,
-                    "\tfmov\t%s, %s\n"
-                    "\tfcvtas\t%s, %s\n",
-                    FPREG_TMP, result,
-                    result, FPREG_TMP);
-            } else if (
-                lvar->type_value == CCMMC_AST_VALUE_FLOAT &&
-                expr->type_value == CCMMC_AST_VALUE_INT) {
-                fprintf(state->asm_output,
-                    "\tscvtf\t%s, %s\n"
-                    "\tfmov\t%s, %s\n",
-                    FPREG_TMP, result,
-                    result, FPREG_TMP);
-            }
-            store_variable(lvar, state, result);
-            ccmmc_register_unlock(state->reg_pool, tmp1);
-            ccmmc_register_unlock(state->reg_pool, tmp2);
-            ccmmc_register_unlock(state->reg_pool, tmp3);
-            ccmmc_register_free(state->reg_pool, tmp1, &current_offset);
-            ccmmc_register_free(state->reg_pool, tmp2, &current_offset);
-            ccmmc_register_free(state->reg_pool, tmp3, &current_offset);
-#undef FPREG_TMP
+            calc_and_save_expression_result(stmt->child,
+                stmt->child->right_sibling, state, current_offset);
             } break;
         case CCMMC_KIND_STMT_IF:
             generate_statement(stmt->child->right_sibling,
@@ -526,7 +531,11 @@ static uint64_t generate_local_variable(
             case CCMMC_KIND_ID_WITH_INIT: {
                 current_offset += 4;
                 var_sym->attr.addr = current_offset;
-                // TODO: initializer
+                // FIXME: This only works for single constant initializer.
+                // The value of sp is wrong, so evaluating expressions
+                // can overwrite other variables!
+                calc_and_save_expression_result(var_decl, var_decl->child,
+                    state, current_offset);
                 } break;
             default:
                 assert(false);
