@@ -9,6 +9,7 @@
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 static void generate_global_variable(CcmmcAst *global_decl, CcmmcState *state)
 {
@@ -732,15 +733,20 @@ static void generate_block(
 static void generate_function(CcmmcAst *function, CcmmcState *state)
 {
     fputs("\t.text\n\t.align\t2\n", state->asm_output);
+    const char *func_name = function->child->right_sibling->value_id.name;
+    const char *symbol_name = func_name;
+    // XXX: We have to rewrite some names to workaround TA's broken toolchain
+    if (strcmp(func_name, "main") == 0 || strcmp(func_name, "MAIN") == 0)
+        symbol_name = "_start_MAIN";
     fprintf(state->asm_output,
         "\t.type\t%s, %%function\n"
         "\t.global\t%s\n"
         "%s:\n"
         "\tstp\tlr, fp, [sp, -16]!\n"
         "\tmov\tfp, sp\n",
-        function->child->right_sibling->value_id.name,
-        function->child->right_sibling->value_id.name,
-        function->child->right_sibling->value_id.name);
+        symbol_name,
+        symbol_name,
+        symbol_name);
     CcmmcAst *param_node = function->child->right_sibling->right_sibling;
     CcmmcAst *block_node = param_node->right_sibling;
     generate_block(block_node, state, 0);
@@ -749,9 +755,9 @@ static void generate_function(CcmmcAst *function, CcmmcState *state)
         "\tldp\tlr, fp, [sp], 16\n"
         "\tret\tlr\n"
         "\t.size\t%s, .-%s\n",
-        function->child->right_sibling->value_id.name,
-        function->child->right_sibling->value_id.name,
-        function->child->right_sibling->value_id.name);
+        func_name,
+        symbol_name,
+        symbol_name);
 }
 
 static void generate_program(CcmmcState *state)
