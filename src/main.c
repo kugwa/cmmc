@@ -38,9 +38,17 @@ int main (int argc, char **argv)
         exit(1);
     }
 
+// Workaround a clang bug: https://llvm.org/bugs/show_bug.cgi?id=20144
+#ifdef __clang__
+# pragma clang diagnostic push
+# pragma clang diagnostic ignored "-Warray-bounds"
+#endif
     const char *source_name = argv[1];
     FILE *source_handle =
         strcmp(source_name, "-") == 0 ? stdin : fopen(source_name, "r");
+#ifdef __clang__
+# pragma clang diagnostic pop
+#endif
     if (source_handle == NULL) {
         fprintf(stderr, "%s: %s: %s\n", prog_name, source_name, ERR_MSG);
         exit(1);
