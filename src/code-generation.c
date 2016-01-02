@@ -82,6 +82,7 @@ static inline bool safe_immediate(uint64_t imm) {
     return imm <= 4096;
 }
 
+#define REG_TMP "x9"
 static inline void load_variable(CcmmcAst *id, CcmmcState *state, const char *r) {
     fprintf(state->asm_output, "\t/* var load, line %zu */\n", id->line_number);
     const char *var_name = id->value_id.name;
@@ -95,8 +96,11 @@ static inline void load_variable(CcmmcAst *id, CcmmcState *state, const char *r)
             fprintf(state->asm_output,
                 "\tldr\t%s, [fp, #-%" PRIu64 "]\n", r, var_sym->attr.addr);
         } else {
-            // TODO: large offset
-            assert(false);
+            fprintf(state->asm_output,
+                "\tldr\t" REG_TMP ", =%" PRIu64 "\n"
+                "\tsub\t" REG_TMP ", fp, " REG_TMP "\n"
+                "\tldr\t%s, [" REG_TMP "]\n",
+                var_sym->attr.addr, r);
         }
     }
 }
@@ -114,11 +118,15 @@ static inline void store_variable(CcmmcAst *id, CcmmcState *state, const char *r
             fprintf(state->asm_output,
                 "\tstr\t%s, [fp, #-%" PRIu64 "]\n", r, var_sym->attr.addr);
         } else {
-            // TODO: large offset
-            assert(false);
+            fprintf(state->asm_output,
+                "\tldr\t" REG_TMP ", =%" PRIu64 "\n"
+                "\tsub\t" REG_TMP ", fp, " REG_TMP "\n"
+                "\tstr\t%s, [" REG_TMP "]\n",
+                var_sym->attr.addr, r);
         }
     }
 }
+#undef REG_TMP
 
 static void generate_expression(CcmmcAst *expr, CcmmcState *state,
     const char *result, const char *op1, const char *op2)
