@@ -129,10 +129,43 @@ static inline void store_variable(CcmmcAst *id, CcmmcState *state, const char *r
 }
 #undef REG_TMP
 
+static const char *call_write(CcmmcAst *id, CcmmcState *state)
+{
+    CcmmcAst *arg = id->right_sibling->child;
+    if (arg->type_value == CCMMC_AST_VALUE_CONST_STRING) {
+        size_t label_str = state->label_number++;
+        fprintf(state->asm_output,
+            "\t.section .rodata\n"
+            "\t.align 2\n"
+            ".LC%zu:\n"
+            "\t.ascii \"%s\\n\\000\"\n"
+            "\t.text\n"
+            "\tadr\tx0, .LC%zu\n",
+            label_str,
+            arg->value_const.const_string,
+            label_str);
+        return "_write_str";
+    } else if (arg->type_value == CCMMC_AST_VALUE_INT) {
+        load_variable(arg, state, "w0");
+        return "_write_int";
+    } else if (arg->type_value == CCMMC_AST_VALUE_FLOAT) {
+        load_variable(arg, state, "s0");
+        return "_write_float";
+    }
+    abort();
+}
+
 static void call_function(CcmmcAst *id, CcmmcState *state)
 {
+    const char *func_name = id->value_id.name;
     ccmmc_register_caller_save(state->reg_pool);
-    fprintf(state->asm_output, "\tbl\t%s\n", id->value_id.name);
+    if (strcmp(func_name, "write") == 0)
+        func_name = call_write(id, state);
+    else if (strcmp(func_name, "read") == 0)
+        func_name = "_read_int";
+    else if (strcmp(func_name, "fread") == 0)
+        func_name = "_read_float";
+    fprintf(state->asm_output, "\tbl\t%s\n", func_name);
     ccmmc_register_caller_load(state->reg_pool);
 }
 
