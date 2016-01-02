@@ -128,6 +128,13 @@ static inline void store_variable(CcmmcAst *id, CcmmcState *state, const char *r
 }
 #undef REG_TMP
 
+static void call_function(CcmmcAst *id, CcmmcState *state)
+{
+    ccmmc_register_caller_save(state->reg_pool);
+    fprintf(state->asm_output, "\tbl\t%s\n", id->value_id.name);
+    ccmmc_register_caller_load(state->reg_pool);
+}
+
 static void generate_expression(CcmmcAst *expr, CcmmcState *state,
     const char *result, const char *op1, const char *op2)
 {
@@ -160,9 +167,7 @@ static void generate_expression(CcmmcAst *expr, CcmmcState *state,
         CcmmcSymbol *func_sym = ccmmc_symbol_table_retrieve(
             state->table, func_name);
         CcmmcAstValueType func_type = func_sym->type.type_base;
-        ccmmc_register_caller_save(state->reg_pool);
-        fprintf(state->asm_output, "\tbl\t%s\n", func_name);
-        ccmmc_register_caller_load(state->reg_pool);
+        call_function(expr->child, state);
         if (func_type == CCMMC_AST_VALUE_FLOAT)
             fprintf(state->asm_output, "\tfmov\t%s, s0\n", result);
         else
@@ -614,9 +619,7 @@ static void generate_statement(
             }
             } break;
         case CCMMC_KIND_STMT_FUNCTION_CALL:
-            ccmmc_register_caller_save(state->reg_pool);
-            fprintf(state->asm_output, "\tbl\t%s\n", stmt->child->value_id.name);
-            ccmmc_register_caller_load(state->reg_pool);
+            call_function(stmt->child, state);
             break;
         case CCMMC_KIND_STMT_RETURN:
             for (CcmmcAst *func = stmt->parent; ; func = func->parent) {
