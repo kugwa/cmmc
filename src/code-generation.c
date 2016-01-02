@@ -523,6 +523,12 @@ static void generate_statement(
                     "\tcbz\t%s, .LC%zu\n",
                     result,
                     label_exit);
+            ccmmc_register_unlock(state->reg_pool, tmp1);
+            ccmmc_register_unlock(state->reg_pool, tmp2);
+            ccmmc_register_unlock(state->reg_pool, tmp3);
+            ccmmc_register_free(state->reg_pool, tmp1, &current_offset);
+            ccmmc_register_free(state->reg_pool, tmp2, &current_offset);
+            ccmmc_register_free(state->reg_pool, tmp3, &current_offset);
             generate_statement(stmt->child->right_sibling,
                 state, current_offset);
             fprintf(state->asm_output,
