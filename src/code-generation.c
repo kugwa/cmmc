@@ -152,7 +152,7 @@ static void generate_expression(CcmmcAst *expr, CcmmcState *state,
         fprintf(state->asm_output, "\tbl\t%s\n", expr->child->value_id.name);
         ccmmc_register_caller_load(state->reg_pool);
         fprintf(state->asm_output, "\tmov\t%s, w0\n", result);
-        assert(false);
+        return ;
     }
 
     if (expr->type_node == CCMMC_AST_NODE_ID) {
