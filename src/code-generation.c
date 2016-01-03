@@ -206,7 +206,7 @@ static void generate_expression(CcmmcAst *expr, CcmmcState *state,
             state->table, func_name);
         CcmmcAstValueType func_type = func_sym->type.type_base;
         call_function(expr->child, state);
-        
+
         result_reg = ccmmc_register_lock(state->reg_pool, result);
         if (func_type == CCMMC_AST_VALUE_FLOAT)
             fprintf(state->asm_output, "\tfmov\t%s, s0\n", result_reg);
@@ -725,7 +725,7 @@ static void generate_statement(
                         fprintf(state->asm_output, "\tfmov\tw0, %s\n", result_reg);
                     ccmmc_register_unlock(state->reg_pool, result);
                     ccmmc_register_free(state->reg_pool, result, &current_offset);
-                    
+
                     // XXX: We should fix the location of the return label
                     // instead of copying code and modifying sp here.
                     if (safe_immediate(current_offset)) {
