@@ -616,7 +616,7 @@ static void generate_statement(
             CcmmcTmp *result = ccmmc_register_alloc(state->reg_pool, &current_offset);
 
             // while condition
-            fprintf(state->asm_output, ".LC%zu\n", label_cmp);
+            fprintf(state->asm_output, ".LC%zu:\n", label_cmp);
             generate_expression(stmt->child, state, result, &current_offset);
             result_reg = ccmmc_register_lock(state->reg_pool, result);
             if (stmt->child->type_value == CCMMC_AST_VALUE_FLOAT)
@@ -641,7 +641,7 @@ static void generate_statement(
                 state, current_offset);
             fprintf(state->asm_output,
                 "\tb\t.LC%zu\n"
-                ".LC%zu\n",
+                ".LC%zu:\n",
                 label_cmp,
                 label_exit);
 #undef FPREG_TMP
@@ -685,21 +685,21 @@ static void generate_statement(
             if (stmt->child->right_sibling->right_sibling->type_node
                 == CCMMC_AST_NODE_NUL) {
                 // no else
-                fprintf(state->asm_output, ".LC%zu\n", label_cross_if);
+                fprintf(state->asm_output, ".LC%zu:\n", label_cross_if);
             }
             else {
                 // jump across else
                 size_t label_exit = state->label_number++;
                 fprintf(state->asm_output,
                     "\tb\t.LC%zu\n"
-                    ".LC%zu\n",
+                    ".LC%zu:\n",
                     label_exit,
                     label_cross_if);
 
                 // else body
                 generate_statement(stmt->child->right_sibling->right_sibling,
                     state, current_offset);
-                fprintf(state->asm_output, ".LC%zu\n", label_exit);
+                fprintf(state->asm_output, ".LC%zu:\n", label_exit);
 #undef FPREG_TMP
             }
             } break;
