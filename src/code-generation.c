@@ -80,7 +80,7 @@ static void generate_global_variable(CcmmcAst *global_decl, CcmmcState *state)
 }
 
 static inline bool safe_immediate(uint64_t imm) {
-    return imm <= 4096;
+    return false; // imm <= 4096;
 }
 
 static void generate_expression(CcmmcAst *expr, CcmmcState *state,
@@ -135,13 +135,16 @@ static void load_variable(CcmmcAst *id, CcmmcState *state, CcmmcTmp *dist,
 
     fprintf(state->asm_output, "\t/* var load, line %zu */\n", id->line_number);
     if (ccmmc_symbol_attr_is_global(&var_sym->attr)) {
-        // TODO: global array
-        dist_reg = ccmmc_register_lock(state->reg_pool, dist);
-        fprintf(state->asm_output,
-            "\tadrp\t" REG_TMP ", %s\n"
-            "\tadd\t" REG_TMP ", " REG_TMP ", #:lo12:%s\n"
-            "\tldr\t%s, [" REG_TMP "]\n", var_name, var_name, dist_reg);
-        ccmmc_register_unlock(state->reg_pool, dist);
+        if (id->value_id.kind != CCMMC_KIND_ID_ARRAY) {
+            dist_reg = ccmmc_register_lock(state->reg_pool, dist);
+            fprintf(state->asm_output,
+                "\tadrp\t" REG_TMP ", %s\n"
+                "\tadd\t" REG_TMP ", " REG_TMP ", #:lo12:%s\n"
+                "\tldr\t%s, [" REG_TMP "]\n", var_name, var_name, dist_reg);
+            ccmmc_register_unlock(state->reg_pool, dist);
+        }
+        else {
+        }
     } else {
         if (id->value_id.kind != CCMMC_KIND_ID_ARRAY) {
             dist_reg = ccmmc_register_lock(state->reg_pool, dist);
@@ -173,7 +176,7 @@ static void load_variable(CcmmcAst *id, CcmmcState *state, CcmmcTmp *dist,
             fprintf(state->asm_output,
                 "\tldr\t" REG_TMP ", =%" PRIu64 "\n"
                 "\tsub\t" REG_TMP ", fp, " REG_TMP "\n"
-                "\tsxt\t%s, %s\n"
+                "\tsxtw\t%s, %s\n"
                 "\tadd\t" REG_TMP ", " REG_TMP ", %s\n"
                 "\tldr\t%s, [" REG_TMP "]\n",
                 var_sym->attr.addr,
@@ -196,13 +199,16 @@ static void store_variable(CcmmcAst *id, CcmmcState *state, CcmmcTmp *src,
 
     fprintf(state->asm_output, "\t/* var store, line %zu */\n", id->line_number);
     if (ccmmc_symbol_attr_is_global(&var_sym->attr)) {
-        //TODO: global array
-        src_reg = ccmmc_register_lock(state->reg_pool, src);
-        fprintf(state->asm_output,
-            "\tadrp\t" REG_TMP ", %s\n"
-            "\tadd\t" REG_TMP ", " REG_TMP ", #:lo12:%s\n"
-            "\tstr\t%s, [" REG_TMP "]\n", var_name, var_name, src_reg);
-        ccmmc_register_unlock(state->reg_pool, src);
+        if (id->value_id.kind != CCMMC_KIND_ID_ARRAY) {
+            src_reg = ccmmc_register_lock(state->reg_pool, src);
+            fprintf(state->asm_output,
+                "\tadrp\t" REG_TMP ", %s\n"
+                "\tadd\t" REG_TMP ", " REG_TMP ", #:lo12:%s\n"
+                "\tstr\t%s, [" REG_TMP "]\n", var_name, var_name, src_reg);
+            ccmmc_register_unlock(state->reg_pool, src);
+        }
+        else {
+        }
     } else {
         if (id->value_id.kind != CCMMC_KIND_ID_ARRAY) {
             src_reg = ccmmc_register_lock(state->reg_pool, src);
@@ -233,7 +239,7 @@ static void store_variable(CcmmcAst *id, CcmmcState *state, CcmmcTmp *src,
             fprintf(state->asm_output,
                 "\tldr\t" REG_TMP ", =%" PRIu64 "\n"
                 "\tsub\t" REG_TMP ", fp, " REG_TMP "\n"
-                "\tsxt\t%s, %s\n"
+                "\tsxtw\t%s, %s\n"
                 "\tadd\t" REG_TMP ", " REG_TMP ", %s\n"
                 "\tstr\t%s, [" REG_TMP "]\n",
                 var_sym->attr.addr,
