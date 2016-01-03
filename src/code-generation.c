@@ -187,6 +187,7 @@ static void generate_expression(CcmmcAst *expr, CcmmcState *state,
             fprintf(state->asm_output,
                 "\tldr\t%s, .LC%zu\n"
                 "\t.section .rodata\n"
+                "\t.align 2\n"
                 ".LC%zu:\n"
                 "\t.float\t%.9g\n"
                 "\t.text\n",
