@@ -161,6 +161,7 @@ static void load_variable(CcmmcAst *id, CcmmcState *state, CcmmcTmp *dist,
         else {
             CcmmcTmp *offset;
             const char *offset_reg;
+            char *extend;
 
             offset = ccmmc_register_alloc(state->reg_pool, current_offset);
             calc_array_offset(id, &var_sym->type, state, offset, current_offset);
@@ -168,12 +169,17 @@ static void load_variable(CcmmcAst *id, CcmmcState *state, CcmmcTmp *dist,
             dist_reg = ccmmc_register_lock(state->reg_pool, dist);
             offset_reg = ccmmc_register_lock(state->reg_pool, offset);
 
+            extend = ccmmc_register_extend_name(offset);
             fprintf(state->asm_output,
                 "\tldr\t" REG_TMP ", =%" PRIu64 "\n"
                 "\tsub\t" REG_TMP ", fp, " REG_TMP "\n"
+                "\tsxt\t%s, %s\n"
                 "\tadd\t" REG_TMP ", " REG_TMP ", %s\n"
                 "\tldr\t%s, [" REG_TMP "]\n",
-                var_sym->attr.addr, offset_reg, dist_reg);
+                var_sym->attr.addr,
+                extend, offset_reg,
+                extend,
+                dist_reg);
 
             ccmmc_register_unlock(state->reg_pool, dist);
             ccmmc_register_unlock(state->reg_pool, offset);
@@ -215,6 +221,7 @@ static void store_variable(CcmmcAst *id, CcmmcState *state, CcmmcTmp *src,
         else {
             CcmmcTmp *offset;
             const char *offset_reg;
+            char *extend;
 
             offset = ccmmc_register_alloc(state->reg_pool, current_offset);
             calc_array_offset(id, &var_sym->type, state, offset, current_offset);
@@ -222,12 +229,17 @@ static void store_variable(CcmmcAst *id, CcmmcState *state, CcmmcTmp *src,
             src_reg = ccmmc_register_lock(state->reg_pool, src);
             offset_reg = ccmmc_register_lock(state->reg_pool, offset);
 
+            extend = ccmmc_register_extend_name(offset);
             fprintf(state->asm_output,
                 "\tldr\t" REG_TMP ", =%" PRIu64 "\n"
                 "\tsub\t" REG_TMP ", fp, " REG_TMP "\n"
+                "\tsxt\t%s, %s\n"
                 "\tadd\t" REG_TMP ", " REG_TMP ", %s\n"
                 "\tstr\t%s, [" REG_TMP "]\n",
-                var_sym->attr.addr, offset_reg, src_reg);
+                var_sym->attr.addr,
+                extend, offset_reg,
+                extend,
+                src_reg);
 
             ccmmc_register_unlock(state->reg_pool, src);
             ccmmc_register_unlock(state->reg_pool, offset);
