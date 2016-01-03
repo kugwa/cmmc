@@ -144,6 +144,7 @@ static void load_variable(CcmmcAst *id, CcmmcState *state, CcmmcTmp *dist,
             ccmmc_register_unlock(state->reg_pool, dist);
         }
         else {
+            // TODO: global array
         }
     } else {
         if (id->value_id.kind != CCMMC_KIND_ID_ARRAY) {
@@ -164,7 +165,7 @@ static void load_variable(CcmmcAst *id, CcmmcState *state, CcmmcTmp *dist,
         else {
             CcmmcTmp *offset;
             const char *offset_reg;
-            char *extend;
+            char extend[8];
 
             offset = ccmmc_register_alloc(state->reg_pool, current_offset);
             calc_array_offset(id, &var_sym->type, state, offset, current_offset);
@@ -172,7 +173,7 @@ static void load_variable(CcmmcAst *id, CcmmcState *state, CcmmcTmp *dist,
             dist_reg = ccmmc_register_lock(state->reg_pool, dist);
             offset_reg = ccmmc_register_lock(state->reg_pool, offset);
 
-            extend = ccmmc_register_extend_name(offset);
+            ccmmc_register_extend_name(offset, extend);
             fprintf(state->asm_output,
                 "\tldr\t" REG_TMP ", =%" PRIu64 "\n"
                 "\tsub\t" REG_TMP ", fp, " REG_TMP "\n"
@@ -208,6 +209,7 @@ static void store_variable(CcmmcAst *id, CcmmcState *state, CcmmcTmp *src,
             ccmmc_register_unlock(state->reg_pool, src);
         }
         else {
+            // TODO: global array
         }
     } else {
         if (id->value_id.kind != CCMMC_KIND_ID_ARRAY) {
@@ -227,7 +229,7 @@ static void store_variable(CcmmcAst *id, CcmmcState *state, CcmmcTmp *src,
         else {
             CcmmcTmp *offset;
             const char *offset_reg;
-            char *extend;
+            char extend[8];
 
             offset = ccmmc_register_alloc(state->reg_pool, current_offset);
             calc_array_offset(id, &var_sym->type, state, offset, current_offset);
@@ -235,7 +237,7 @@ static void store_variable(CcmmcAst *id, CcmmcState *state, CcmmcTmp *src,
             src_reg = ccmmc_register_lock(state->reg_pool, src);
             offset_reg = ccmmc_register_lock(state->reg_pool, offset);
 
-            extend = ccmmc_register_extend_name(offset);
+            ccmmc_register_extend_name(offset, extend);
             fprintf(state->asm_output,
                 "\tldr\t" REG_TMP ", =%" PRIu64 "\n"
                 "\tsub\t" REG_TMP ", fp, " REG_TMP "\n"

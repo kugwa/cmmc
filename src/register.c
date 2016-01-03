@@ -13,7 +13,6 @@
 #define REG_SIZE 4
 #define SPILL_MAX 64
 
-static char extend_name[8];
 static const char *reg_name[REG_NUM] = {
     "w10", "w11", "w12", "w13", "w14", "w15"};
 
@@ -192,14 +191,13 @@ void ccmmc_register_free(CcmmcRegPool *pool, CcmmcTmp *tmp, uint64_t *offset)
     }
 }
 
-char *ccmmc_register_extend_name(CcmmcTmp *tmp)
+void ccmmc_register_extend_name(CcmmcTmp *tmp, char *extend_name)
 {
     if (tmp->reg != NULL) {
         strcpy(extend_name, tmp->reg->name);
         extend_name[0] = 'x';
-        return extend_name;
     }
-    return NULL;
+    else extend_name[0] = '\0';
 }
 
 void ccmmc_register_caller_save(CcmmcRegPool *pool)
