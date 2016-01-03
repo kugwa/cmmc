@@ -140,7 +140,7 @@ static const char *call_write(CcmmcAst *id, CcmmcState *state)
             "\t.section .rodata\n"
             "\t.align 2\n"
             ".LC%zu:\n"
-            "\t.ascii \"%s\\n\\000\"\n"
+            "\t.ascii \"%s\\000\"\n"
             "\t.text\n"
             "\tadr\tx0, .LC%zu\n",
             label_str,
