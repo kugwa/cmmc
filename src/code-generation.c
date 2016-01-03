@@ -724,7 +724,7 @@ static void generate_statement(
                     if (func_type == CCMMC_AST_VALUE_FLOAT)
                         fprintf(state->asm_output, "\tfmov\ts0, %s\n", result_reg);
                     else
-                        fprintf(state->asm_output, "\tfmov\tw0, %s\n", result_reg);
+                        fprintf(state->asm_output, "\tmov\tw0, %s\n", result_reg);
                     ccmmc_register_unlock(state->reg_pool, result);
                     ccmmc_register_free(state->reg_pool, result, &current_offset);
 
