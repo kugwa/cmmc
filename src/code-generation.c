@@ -191,10 +191,12 @@ static void store_variable(CcmmcAst *id, CcmmcState *state, CcmmcTmp *src,
     fprintf(state->asm_output, "\t/* var store, line %zu */\n", id->line_number);
     if (ccmmc_symbol_attr_is_global(&var_sym->attr)) {
         //TODO: global array
+        src_reg = ccmmc_register_lock(state->reg_pool, src);
         fprintf(state->asm_output,
             "\tadrp\t" REG_TMP ", %s\n"
             "\tadd\t" REG_TMP ", " REG_TMP ", #:lo12:%s\n"
             "\tstr\t%s, [" REG_TMP "]\n", var_name, var_name, src_reg);
+        ccmmc_register_unlock(state->reg_pool, src);
     } else {
         if (id->value_id.kind != CCMMC_KIND_ID_ARRAY) {
             src_reg = ccmmc_register_lock(state->reg_pool, src);
