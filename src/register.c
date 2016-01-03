@@ -7,7 +7,7 @@
 #include <stdlib.h>
 
 #define REG_NUM 6
-#define REG_RESERVED "x9"
+#define REG_RESERVED "w9"
 #define REG_LOCK_MAX 3
 #define REG_SIZE 4
 #define SPILL_MAX 64

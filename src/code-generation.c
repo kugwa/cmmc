@@ -170,14 +170,17 @@ static void call_function(CcmmcAst *id, CcmmcState *state)
 }
 
 static void generate_expression(CcmmcAst *expr, CcmmcState *state,
-    const char *result, const char *op1, const char *op2)
+    CcmmcTmp *result, uint64_t *current_offset)
 {
+    const char *result_reg, *op1_reg, *op2_reg;
+
     if (expr->type_node == CCMMC_AST_NODE_CONST_VALUE) {
         fprintf(state->asm_output,
             "\t/* const value, line %zu */\n", expr->line_number);
+        result_reg = ccmmc_register_lock(state->reg_pool, result);
         if (expr->type_value == CCMMC_AST_VALUE_INT) {
             fprintf(state->asm_output,
-                "\tldr\t%s, =%d\n", result, expr->value_const.const_int);
+                "\tldr\t%s, =%d\n", result_reg, expr->value_const.const_int);
         } else if (expr->type_value == CCMMC_AST_VALUE_FLOAT) {
             fprintf(state->asm_output,
                 "\tldr\t%s, .LC%zu\n"
@@ -185,13 +188,14 @@ static void generate_expression(CcmmcAst *expr, CcmmcState *state,
                 ".LC%zu:\n"
                 "\t.float\t%.9g\n"
                 "\t.text\n",
-                result, state->label_number,
+                result_reg, state->label_number,
                 state->label_number,
                 expr->value_const.const_float);
             state->label_number++;
         } else {
             assert(false);
         }
+        ccmmc_register_unlock(state->reg_pool, result);
         return;
     }
 
@@ -202,15 +206,20 @@ static void generate_expression(CcmmcAst *expr, CcmmcState *state,
             state->table, func_name);
         CcmmcAstValueType func_type = func_sym->type.type_base;
         call_function(expr->child, state);
+        
+        result_reg = ccmmc_register_lock(state->reg_pool, result);
         if (func_type == CCMMC_AST_VALUE_FLOAT)
-            fprintf(state->asm_output, "\tfmov\t%s, s0\n", result);
+            fprintf(state->asm_output, "\tfmov\t%s, s0\n", result_reg);
         else
-            fprintf(state->asm_output, "\tmov\t%s, w0\n", result);
+            fprintf(state->asm_output, "\tmov\t%s, w0\n", result_reg);
+        ccmmc_register_unlock(state->reg_pool, result);
         return ;
     }
 
     if (expr->type_node == CCMMC_AST_NODE_ID) {
-        load_variable(expr, state, result);
+        result_reg = ccmmc_register_lock(state->reg_pool, result);
+        load_variable(expr, state, result_reg);
+        ccmmc_register_unlock(state->reg_pool, result);
         return;
     }
 
@@ -228,65 +237,89 @@ static void generate_expression(CcmmcAst *expr, CcmmcState *state,
         // evaluate the left expression
         fprintf(state->asm_output,
             "\t/* expr binary op, line %zu */\n", expr->line_number);
-        generate_expression(left, state, op1, op2, result);
+        generate_expression(left, state, result, current_offset);
+        CcmmcTmp *op1 = ccmmc_register_alloc(state->reg_pool, current_offset);
+        result_reg = ccmmc_register_lock(state->reg_pool, result);
+        op1_reg = ccmmc_register_lock(state->reg_pool, op1);
+        fprintf(state->asm_output,
+            "\t/* mov op1_reg, result_reg */\n"
+            "\tmov\t%s, %s\n",
+            op1_reg, result_reg);
+        ccmmc_register_unlock(state->reg_pool, result);
+        ccmmc_register_unlock(state->reg_pool, op1);
+
         if (expr->value_expr.op_binary == CCMMC_KIND_OP_BINARY_AND) {
             // logical AND needs short-curcuit evaluation
             label_short = state->label_number++;
+            op1_reg = ccmmc_register_lock(state->reg_pool, op1);
             if (left->type_value == CCMMC_AST_VALUE_FLOAT)
                 fprintf(state->asm_output,
                     "\tfmov\t%s, %s\n"
                     "\tfcmp\t%s, #0.0\n"
                     "\tb.eq\t.LC%zu\n",
-                    FPREG_OP1, op1,
+                    FPREG_OP1, op1_reg,
                     FPREG_OP1,
                     label_short);
             else
                 fprintf(state->asm_output,
                     "\tcbz\t%s, .LC%zu\n",
-                    op1, label_short);
+                    op1_reg, label_short);
+            ccmmc_register_unlock(state->reg_pool, op1);
         } else if (expr->value_expr.op_binary == CCMMC_KIND_OP_BINARY_OR) {
             // logical OR needs short-curcuit evaluation
             label_short = state->label_number++;
+            op1_reg = ccmmc_register_lock(state->reg_pool, op1);
             if (left->type_value == CCMMC_AST_VALUE_FLOAT)
                 fprintf(state->asm_output,
                     "\tfmov\t%s, %s\n"
                     "\tfcmp\t%s, #0.0\n"
                     "\tb.ne\t.LC%zu\n",
-                    FPREG_OP1, op1,
+                    FPREG_OP1, op1_reg,
                     FPREG_OP1,
                     label_short);
             else
                 fprintf(state->asm_output,
                     "\tcbnz\t%s, .LC%zu\n",
-                    op1, label_short);
+                    op1_reg, label_short);
+            ccmmc_register_unlock(state->reg_pool, op1);
         }
 
         // evaluate the right expression
+        generate_expression(right, state, result, current_offset);
+        CcmmcTmp *op2 = ccmmc_register_alloc(state->reg_pool, current_offset);
+        result_reg = ccmmc_register_lock(state->reg_pool, result);
+        op2_reg = ccmmc_register_lock(state->reg_pool, op2);
         fprintf(state->asm_output,
-            "\tsub\tsp, sp, #4 /* save left op */\n"
-            "\tstr\t%s, [sp] /* save left op */\n",
-            op1);
-        generate_expression(right, state, op2, result, op1);
-        fprintf(state->asm_output,
-            "\tldr\t%s, [sp] /* restore left op */\n"
-            "\tadd\tsp, sp, #4 /* restore left op */\n",
-            op1);
+            "\t/* mov op2_reg, result_reg */\n"
+            "\tmov\t%s, %s\n",
+            op2_reg, result_reg);
+        ccmmc_register_unlock(state->reg_pool, result);
+        ccmmc_register_unlock(state->reg_pool, op2);
 
         if (left->type_value == CCMMC_AST_VALUE_FLOAT ||
             right->type_value == CCMMC_AST_VALUE_FLOAT) {
+            op1_reg = ccmmc_register_lock(state->reg_pool, op1);
             if (left->type_value == CCMMC_AST_VALUE_INT)
-                fprintf(state->asm_output, "\tscvtf\t%s, %s\n", FPREG_OP1, op1);
+                fprintf(state->asm_output, "\tscvtf\t%s, %s\n", FPREG_OP1, op1_reg);
             else if (left->type_value == CCMMC_AST_VALUE_FLOAT)
-                fprintf(state->asm_output, "\tfmov\t%s, %s\n", FPREG_OP1, op1);
+                fprintf(state->asm_output, "\tfmov\t%s, %s\n", FPREG_OP1, op1_reg);
             else
                 assert(false);
+            ccmmc_register_unlock(state->reg_pool, op1);
+
+            op2_reg = ccmmc_register_lock(state->reg_pool, op2);
             if (right->type_value == CCMMC_AST_VALUE_INT)
-                fprintf(state->asm_output, "\tscvtf\t%s, %s\n", FPREG_OP2, op2);
+                fprintf(state->asm_output, "\tscvtf\t%s, %s\n", FPREG_OP2, op2_reg);
             else if (right->type_value == CCMMC_AST_VALUE_FLOAT)
-                fprintf(state->asm_output, "\tfmov\t%s, %s\n", FPREG_OP2, op2);
+                fprintf(state->asm_output, "\tfmov\t%s, %s\n", FPREG_OP2, op2_reg);
             else
                 assert(false);
+            ccmmc_register_unlock(state->reg_pool, op2);
         }
+
+        result_reg = ccmmc_register_lock(state->reg_pool, result);
+        op1_reg = ccmmc_register_lock(state->reg_pool, op1);
+        op2_reg = ccmmc_register_lock(state->reg_pool, op2);
 
         switch (expr->value_expr.op_binary) {
             case CCMMC_KIND_OP_BINARY_ADD:
@@ -295,7 +328,7 @@ static void generate_expression(CcmmcAst *expr, CcmmcState *state,
                         FPREG_RESULT, FPREG_OP1, FPREG_OP2);
                 else
                     fprintf(state->asm_output, "\tadd\t%s, %s, %s\n",
-                        result, op1, op2);
+                        result_reg, op1_reg, op2_reg);
                 break;
             case CCMMC_KIND_OP_BINARY_SUB:
                 if (expr->type_value == CCMMC_AST_VALUE_FLOAT)
@@ -303,7 +336,7 @@ static void generate_expression(CcmmcAst *expr, CcmmcState *state,
                         FPREG_RESULT, FPREG_OP1, FPREG_OP2);
                 else
                     fprintf(state->asm_output, "\tsub\t%s, %s, %s\n",
-                        result, op1, op2);
+                        result_reg, op1_reg, op2_reg);
                 break;
             case CCMMC_KIND_OP_BINARY_MUL:
                 if (expr->type_value == CCMMC_AST_VALUE_FLOAT)
@@ -311,7 +344,7 @@ static void generate_expression(CcmmcAst *expr, CcmmcState *state,
                         FPREG_RESULT, FPREG_OP1, FPREG_OP2);
                 else
                     fprintf(state->asm_output, "\tmul\t%s, %s, %s\n",
-                        result, op1, op2);
+                        result_reg, op1_reg, op2_reg);
                 break;
             case CCMMC_KIND_OP_BINARY_DIV:
                 if (expr->type_value == CCMMC_AST_VALUE_FLOAT)
@@ -319,55 +352,55 @@ static void generate_expression(CcmmcAst *expr, CcmmcState *state,
                         FPREG_RESULT, FPREG_OP1, FPREG_OP2);
                 else
                     fprintf(state->asm_output, "\tsdiv\t%s, %s, %s\n",
-                        result, op1, op2);
+                        result_reg, op1_reg, op2_reg);
                 break;
             case CCMMC_KIND_OP_BINARY_EQ:
                 if (left->type_value == CCMMC_AST_VALUE_FLOAT ||
                     right->type_value == CCMMC_AST_VALUE_FLOAT)
                     fprintf(state->asm_output, "\tfcmp\t%s, %s\n", FPREG_OP1, FPREG_OP2);
                 else
-                    fprintf(state->asm_output, "\tcmp\t%s, %s\n", op1, op2);
-                fprintf(state->asm_output, "\tcset\t%s, eq\n", result);
+                    fprintf(state->asm_output, "\tcmp\t%s, %s\n", op1_reg, op2_reg);
+                fprintf(state->asm_output, "\tcset\t%s, eq\n", result_reg);
                 break;
             case CCMMC_KIND_OP_BINARY_GE:
                 if (left->type_value == CCMMC_AST_VALUE_FLOAT ||
                     right->type_value == CCMMC_AST_VALUE_FLOAT)
                     fprintf(state->asm_output, "\tfcmp\t%s, %s\n", FPREG_OP1, FPREG_OP2);
                 else
-                    fprintf(state->asm_output, "\tcmp\t%s, %s\n", op1, op2);
-                fprintf(state->asm_output, "\tcset\t%s, ge\n", result);
+                    fprintf(state->asm_output, "\tcmp\t%s, %s\n", op1_reg, op2_reg);
+                fprintf(state->asm_output, "\tcset\t%s, ge\n", result_reg);
                 break;
             case CCMMC_KIND_OP_BINARY_LE:
                 if (left->type_value == CCMMC_AST_VALUE_FLOAT ||
                     right->type_value == CCMMC_AST_VALUE_FLOAT)
                     fprintf(state->asm_output, "\tfcmp\t%s, %s\n", FPREG_OP1, FPREG_OP2);
                 else
-                    fprintf(state->asm_output, "\tcmp\t%s, %s\n", op1, op2);
-                fprintf(state->asm_output, "\tcset\t%s, le\n", result);
+                    fprintf(state->asm_output, "\tcmp\t%s, %s\n", op1_reg, op2_reg);
+                fprintf(state->asm_output, "\tcset\t%s, le\n", result_reg);
                 break;
             case CCMMC_KIND_OP_BINARY_NE:
                 if (left->type_value == CCMMC_AST_VALUE_FLOAT ||
                     right->type_value == CCMMC_AST_VALUE_FLOAT)
                     fprintf(state->asm_output, "\tfcmp\t%s, %s\n", FPREG_OP1, FPREG_OP2);
                 else
-                    fprintf(state->asm_output, "\tcmp\t%s, %s\n", op1, op2);
-                fprintf(state->asm_output, "\tcset\t%s, ne\n", result);
+                    fprintf(state->asm_output, "\tcmp\t%s, %s\n", op1_reg, op2_reg);
+                fprintf(state->asm_output, "\tcset\t%s, ne\n", result_reg);
                 break;
             case CCMMC_KIND_OP_BINARY_GT:
                 if (left->type_value == CCMMC_AST_VALUE_FLOAT ||
                     right->type_value == CCMMC_AST_VALUE_FLOAT)
                     fprintf(state->asm_output, "\tfcmp\t%s, %s\n", FPREG_OP1, FPREG_OP2);
                 else
-                    fprintf(state->asm_output, "\tcmp\t%s, %s\n", op1, op2);
-                fprintf(state->asm_output, "\tcset\t%s, gt\n", result);
+                    fprintf(state->asm_output, "\tcmp\t%s, %s\n", op1_reg, op2_reg);
+                fprintf(state->asm_output, "\tcset\t%s, gt\n", result_reg);
                 break;
             case CCMMC_KIND_OP_BINARY_LT:
                 if (left->type_value == CCMMC_AST_VALUE_FLOAT ||
                     right->type_value == CCMMC_AST_VALUE_FLOAT)
                     fprintf(state->asm_output, "\tfcmp\t%s, %s\n", FPREG_OP1, FPREG_OP2);
                 else
-                    fprintf(state->asm_output, "\tcmp\t%s, %s\n", op1, op2);
-                fprintf(state->asm_output, "\tcset\t%s, lt\n", result);
+                    fprintf(state->asm_output, "\tcmp\t%s, %s\n", op1_reg, op2_reg);
+                fprintf(state->asm_output, "\tcset\t%s, lt\n", result_reg);
                 break;
             case CCMMC_KIND_OP_BINARY_AND: {
                 size_t label_exit = state->label_number++;
@@ -382,10 +415,10 @@ static void generate_expression(CcmmcAst *expr, CcmmcState *state,
                         ".LC%zu:\n",
                         FPREG_OP2,
                         label_short,
-                        result,
+                        result_reg,
                         label_exit,
                         label_short,
-                        result,
+                        result_reg,
                         label_exit);
                 else
                     fprintf(state->asm_output,
@@ -395,11 +428,11 @@ static void generate_expression(CcmmcAst *expr, CcmmcState *state,
                         ".LC%zu:\n"
                         "\tmov\t%s, #0\n"
                         ".LC%zu:\n",
-                        op2, label_short,
-                        result,
+                        op2_reg, label_short,
+                        result_reg,
                         label_exit,
                         label_short,
-                        result,
+                        result_reg,
                         label_exit);
                 } break;
             case CCMMC_KIND_OP_BINARY_OR: {
@@ -415,10 +448,10 @@ static void generate_expression(CcmmcAst *expr, CcmmcState *state,
                         ".LC%zu:\n",
                         FPREG_OP2,
                         label_short,
-                        result,
+                        result_reg,
                         label_exit,
                         label_short,
-                        result,
+                        result_reg,
                         label_exit);
                 else
                     fprintf(state->asm_output,
@@ -428,32 +461,54 @@ static void generate_expression(CcmmcAst *expr, CcmmcState *state,
                         ".LC%zu:\n"
                         "\tmov\t%s, #1\n"
                         ".LC%zu:\n",
-                        op2, label_short,
-                        result,
+                        op2_reg, label_short,
+                        result_reg,
                         label_exit,
                         label_short,
-                        result,
+                        result_reg,
                         label_exit);
                 } break;
             default:
                 assert(false);
         }
+        ccmmc_register_unlock(state->reg_pool, result);
+        ccmmc_register_unlock(state->reg_pool, op1);
+        ccmmc_register_unlock(state->reg_pool, op2);
 
-        if (expr->type_value == CCMMC_AST_VALUE_FLOAT)
-            fprintf(state->asm_output, "\tfmov\t%s, %s\n", result, FPREG_RESULT);
+        ccmmc_register_free(state->reg_pool, op1, current_offset);
+        ccmmc_register_free(state->reg_pool, op2, current_offset);
+
+        if (expr->type_value == CCMMC_AST_VALUE_FLOAT) {
+            result_reg = ccmmc_register_lock(state->reg_pool, result);
+            fprintf(state->asm_output, "\tfmov\t%s, %s\n", result_reg, FPREG_RESULT);
+            ccmmc_register_unlock(state->reg_pool, result);
+        }
         return;
     }
 
     if (expr->value_expr.kind == CCMMC_KIND_EXPR_UNARY_OP) {
         CcmmcAst *arg = expr->child;
-
         fprintf(state->asm_output,
             "\t/* expr unary op, line %zu */\n", expr->line_number);
-        generate_expression(arg, state, op1, op2, result);
+        generate_expression(arg, state, result, current_offset);
+        CcmmcTmp *op1 = ccmmc_register_alloc(state->reg_pool, current_offset);
+        result_reg = ccmmc_register_lock(state->reg_pool, result);
+        op1_reg = ccmmc_register_lock(state->reg_pool, op1);
+        fprintf(state->asm_output,
+            "\t/* mov op1_reg, result_reg */\n"
+            "\tmov\t%s, %s\n",
+            op1_reg, result_reg);
+        ccmmc_register_unlock(state->reg_pool, result);
+        ccmmc_register_unlock(state->reg_pool, op1);
 
-        if (arg->type_value == CCMMC_AST_VALUE_FLOAT)
-            fprintf(state->asm_output, "\tfmov\t%s, %s\n", FPREG_OP1, op1);
+        if (arg->type_value == CCMMC_AST_VALUE_FLOAT) {
+            op1_reg = ccmmc_register_lock(state->reg_pool, op1);
+            fprintf(state->asm_output, "\tfmov\t%s, %s\n", FPREG_OP1, op1_reg);
+            ccmmc_register_unlock(state->reg_pool, op1);
+        }
 
+        result_reg = ccmmc_register_lock(state->reg_pool, result);
+        op1_reg = ccmmc_register_lock(state->reg_pool, op1);
         switch (expr->value_expr.op_unary) {
             case CCMMC_KIND_OP_UNARY_POSITIVE:
                 fputs("\t/* nop */\n", state->asm_output);
@@ -462,21 +517,28 @@ static void generate_expression(CcmmcAst *expr, CcmmcState *state,
                 if (arg->type_value == CCMMC_AST_VALUE_FLOAT)
                     fprintf(state->asm_output, "\tfneg\t%s, %s\n", FPREG_RESULT, FPREG_OP1);
                 else
-                    fprintf(state->asm_output, "\tneg\t%s, %s\n", result, op1);
+                    fprintf(state->asm_output, "\tneg\t%s, %s\n", result_reg, op1_reg);
                 break;
             case CCMMC_KIND_OP_UNARY_LOGICAL_NEGATION:
                 if (arg->type_value == CCMMC_AST_VALUE_FLOAT)
                     fprintf(state->asm_output, "\tfcmp\t%s, #0.0\n", FPREG_OP1);
                 else
-                    fprintf(state->asm_output, "\tcmp\t%s, wzr\n", op1);
-                fprintf(state->asm_output, "\tcset\t%s, eq\n", result);
+                    fprintf(state->asm_output, "\tcmp\t%s, wzr\n", op1_reg);
+                fprintf(state->asm_output, "\tcset\t%s, eq\n", result_reg);
                 break;
             default:
                 assert(false);
         }
+        ccmmc_register_unlock(state->reg_pool, result);
+        ccmmc_register_unlock(state->reg_pool, op1);
 
-        if (expr->type_value == CCMMC_AST_VALUE_FLOAT)
-            fprintf(state->asm_output, "\tfmov\t%s, %s\n", result, FPREG_RESULT);
+        ccmmc_register_free(state->reg_pool, op1, current_offset);
+
+        if (expr->type_value == CCMMC_AST_VALUE_FLOAT) {
+            result_reg = ccmmc_register_lock(state->reg_pool, result);
+            fprintf(state->asm_output, "\tfmov\t%s, %s\n", result_reg, FPREG_RESULT);
+            ccmmc_register_unlock(state->reg_pool, result);
+        }
         return;
     }
 
@@ -488,45 +550,46 @@ static void generate_expression(CcmmcAst *expr, CcmmcState *state,
 }
 
 static void calc_expression_result(CcmmcAst *expr, CcmmcAstValueType type,
-    CcmmcState *state, uint64_t current_offset, const char *result)
+    CcmmcState *state, CcmmcTmp *result, uint64_t *current_offset)
 {
 #define FPREG_TMP  "s16"
-    CcmmcTmp *tmp1 = ccmmc_register_alloc(state->reg_pool, &current_offset);
-    CcmmcTmp *tmp2 = ccmmc_register_alloc(state->reg_pool, &current_offset);
-    const char *op1 = ccmmc_register_lock(state->reg_pool, tmp1);
-    const char *op2 = ccmmc_register_lock(state->reg_pool, tmp2);
-    generate_expression(expr, state, result, op1, op2);
+    const char *result_reg;
+    generate_expression(expr, state, result, current_offset);
+
+    result_reg = ccmmc_register_lock(state->reg_pool, result);
     if (expr->type_value == CCMMC_AST_VALUE_FLOAT &&
         type == CCMMC_AST_VALUE_INT) {
         fprintf(state->asm_output,
             "\tfmov\t%s, %s\n"
             "\tfcvtas\t%s, %s\n",
-            FPREG_TMP, result,
-            result, FPREG_TMP);
+            FPREG_TMP, result_reg,
+            result_reg, FPREG_TMP);
     } else if (expr->type_value == CCMMC_AST_VALUE_INT &&
         type == CCMMC_AST_VALUE_FLOAT) {
         fprintf(state->asm_output,
             "\tscvtf\t%s, %s\n"
             "\tfmov\t%s, %s\n",
-            FPREG_TMP, result,
-            result, FPREG_TMP);
+            FPREG_TMP, result_reg,
+            result_reg, FPREG_TMP);
     }
-    ccmmc_register_unlock(state->reg_pool, tmp1);
-    ccmmc_register_unlock(state->reg_pool, tmp2);
-    ccmmc_register_free(state->reg_pool, tmp1, &current_offset);
-    ccmmc_register_free(state->reg_pool, tmp2, &current_offset);
+    ccmmc_register_unlock(state->reg_pool, result);
 #undef FPREG_TMP
 }
 
 static void calc_and_save_expression_result(CcmmcAst *lvar, CcmmcAst *expr,
-    CcmmcState *state, uint64_t current_offset)
+    CcmmcState *state, uint64_t *current_offset)
 {
-    CcmmcTmp *tmp = ccmmc_register_alloc(state->reg_pool, &current_offset);
-    const char *result = ccmmc_register_lock(state->reg_pool, tmp);
-    calc_expression_result(expr, lvar->type_value, state, current_offset, result);
-    store_variable(lvar, state, result);
-    ccmmc_register_unlock(state->reg_pool, tmp);
-    ccmmc_register_free(state->reg_pool, tmp, &current_offset);
+    const char *result_reg;
+    CcmmcTmp *result;
+
+    result = ccmmc_register_alloc(state->reg_pool, current_offset);
+    calc_expression_result(expr, lvar->type_value, state, result, current_offset);
+
+    result_reg = ccmmc_register_lock(state->reg_pool, result);
+    store_variable(lvar, state, result_reg);
+    ccmmc_register_unlock(state->reg_pool, result);
+
+    ccmmc_register_free(state->reg_pool, result, current_offset);
 }
 
 static void generate_block(
@@ -547,36 +610,29 @@ static void generate_statement(
 #define FPREG_TMP  "s16"
             size_t label_cmp = state->label_number++;
             size_t label_exit = state->label_number++;
-            CcmmcTmp *tmp1 = ccmmc_register_alloc(state->reg_pool, &current_offset);
-            CcmmcTmp *tmp2 = ccmmc_register_alloc(state->reg_pool, &current_offset);
-            CcmmcTmp *tmp3 = ccmmc_register_alloc(state->reg_pool, &current_offset);
-            const char *result = ccmmc_register_lock(state->reg_pool, tmp1);
-            const char *op1 = ccmmc_register_lock(state->reg_pool, tmp2);
-            const char *op2 = ccmmc_register_lock(state->reg_pool, tmp3);
+            const char *result_reg;
+            CcmmcTmp *result = ccmmc_register_alloc(state->reg_pool, &current_offset);
 
             // while condition
             fprintf(state->asm_output, ".LC%zu\n", label_cmp);
-            generate_expression(stmt->child, state, result, op1, op2);
+            generate_expression(stmt->child, state, result, &current_offset);
+            result_reg = ccmmc_register_lock(state->reg_pool, result);
             if (stmt->child->type_value == CCMMC_AST_VALUE_FLOAT)
                 fprintf(state->asm_output,
                     "\tfmov\t%s, %s\n"
                     "\tfcmp\t%s, #0.0\n"
                     "\tb.e\t.LC%zu\n",
                     FPREG_TMP,
-                    result,
+                    result_reg,
                     FPREG_TMP,
                     label_exit);
             else
                 fprintf(state->asm_output,
                     "\tcbz\t%s, .LC%zu\n",
-                    result,
+                    result_reg,
                     label_exit);
-            ccmmc_register_unlock(state->reg_pool, tmp1);
-            ccmmc_register_unlock(state->reg_pool, tmp2);
-            ccmmc_register_unlock(state->reg_pool, tmp3);
-            ccmmc_register_free(state->reg_pool, tmp1, &current_offset);
-            ccmmc_register_free(state->reg_pool, tmp2, &current_offset);
-            ccmmc_register_free(state->reg_pool, tmp3, &current_offset);
+            ccmmc_register_unlock(state->reg_pool, result);
+            ccmmc_register_free(state->reg_pool, result, &current_offset);
 
             // while body
             generate_statement(stmt->child->right_sibling,
@@ -592,40 +648,33 @@ static void generate_statement(
             break;
         case CCMMC_KIND_STMT_ASSIGN:
             calc_and_save_expression_result(stmt->child,
-                stmt->child->right_sibling, state, current_offset);
+                stmt->child->right_sibling, state, &current_offset);
             break;
         case CCMMC_KIND_STMT_IF: {
 #define FPREG_TMP  "s16"
             size_t label_cross_if = state->label_number++;
-            CcmmcTmp *tmp1 = ccmmc_register_alloc(state->reg_pool, &current_offset);
-            CcmmcTmp *tmp2 = ccmmc_register_alloc(state->reg_pool, &current_offset);
-            CcmmcTmp *tmp3 = ccmmc_register_alloc(state->reg_pool, &current_offset);
-            const char *result = ccmmc_register_lock(state->reg_pool, tmp1);
-            const char *op1 = ccmmc_register_lock(state->reg_pool, tmp2);
-            const char *op2 = ccmmc_register_lock(state->reg_pool, tmp3);
+            const char *result_reg;
+            CcmmcTmp *result = ccmmc_register_alloc(state->reg_pool, &current_offset);
 
             // if condition
-            generate_expression(stmt->child, state, result, op1, op2);
+            generate_expression(stmt->child, state, result, &current_offset);
+            result_reg = ccmmc_register_lock(state->reg_pool, result);
             if (stmt->child->type_value == CCMMC_AST_VALUE_FLOAT)
                 fprintf(state->asm_output,
                     "\tfmov\t%s, %s\n"
                     "\tfcmp\t%s, #0.0\n"
                     "\tb.e\t.LC%zu\n",
                     FPREG_TMP,
-                    result,
+                    result_reg,
                     FPREG_TMP,
                     label_cross_if);
             else
                 fprintf(state->asm_output,
                     "\tcbz\t%s, .LC%zu\n",
-                    result,
+                    result_reg,
                     label_cross_if);
-            ccmmc_register_unlock(state->reg_pool, tmp1);
-            ccmmc_register_unlock(state->reg_pool, tmp2);
-            ccmmc_register_unlock(state->reg_pool, tmp3);
-            ccmmc_register_free(state->reg_pool, tmp1, &current_offset);
-            ccmmc_register_free(state->reg_pool, tmp2, &current_offset);
-            ccmmc_register_free(state->reg_pool, tmp3, &current_offset);
+            ccmmc_register_unlock(state->reg_pool, result);
+            ccmmc_register_free(state->reg_pool, result, &current_offset);
 
             // if body
             generate_statement(stmt->child->right_sibling,
@@ -663,19 +712,31 @@ static void generate_statement(
                     CcmmcSymbol *func_sym =
                         ccmmc_symbol_table_retrieve(state->table, func_name);
                     CcmmcAstValueType func_type = func_sym->type.type_base;
+                    const char *result_reg;
+                    CcmmcTmp *result;
+
+                    result = ccmmc_register_alloc(state->reg_pool, &current_offset);
                     calc_expression_result(stmt->child, func_sym->type.type_base,
-                        state, current_offset, "w0");
+                        state, result, &current_offset);
+                    result_reg = ccmmc_register_lock(state->reg_pool, result);
                     if (func_type == CCMMC_AST_VALUE_FLOAT)
-                        fputs("\tfmov\ts0, w0\n", state->asm_output);
+                        fprintf(state->asm_output, "\tfmov\ts0, %s\n", result_reg);
+                    else
+                        fprintf(state->asm_output, "\tfmov\tw0, %s\n", result_reg);
+                    ccmmc_register_unlock(state->reg_pool, result);
+                    ccmmc_register_free(state->reg_pool, result, &current_offset);
+                    
                     // XXX: We should fix the location of the return label
                     // instead of copying code and modifying sp here.
                     if (safe_immediate(current_offset)) {
                         fprintf(state->asm_output, "\tadd\tsp, sp, #%" PRIu64 "\n",
                             current_offset);
                     } else {
+#define REG_TMP "x9"
                         fprintf(state->asm_output,
                             "\tldr\t%s, =%" PRIu64 "\n"
-                            "\tadd\tsp, sp, %s\n", "x9", current_offset, "x9");
+                            "\tadd\tsp, sp, %s\n", REG_TMP, current_offset, REG_TMP);
+#undef REG_TMP
                     }
                     fprintf(state->asm_output, "\tb\t.LR_%s\n", func_name);
                     break;
@@ -714,7 +775,7 @@ static uint64_t generate_local_variable(
                 // The value of sp is wrong, so evaluating expressions
                 // can overwrite other variables!
                 calc_and_save_expression_result(var_decl, var_decl->child,
-                    state, current_offset);
+                    state, &current_offset);
                 } break;
             default:
                 assert(false);
@@ -740,13 +801,11 @@ static void generate_block(
                 fprintf(state->asm_output, "\tsub\tsp, sp, #%" PRIu64 "\n",
                     offset_diff);
             } else {
-                CcmmcTmp *tmp = ccmmc_register_alloc(state->reg_pool, &current_offset);
-                const char *reg_name = ccmmc_register_lock(state->reg_pool, tmp);
+#define REG_TMP "x9"
                 fprintf(state->asm_output,
                     "\tldr\t%s, =%" PRIu64 "\n"
-                    "\tsub\tsp, sp, %s\n", reg_name, offset_diff, reg_name);
-                ccmmc_register_unlock(state->reg_pool, tmp);
-                ccmmc_register_free(state->reg_pool, tmp, &current_offset);
+                    "\tsub\tsp, sp, %s\n", REG_TMP, offset_diff, REG_TMP);
+#undef REG_TMP
             }
         }
         child = child->right_sibling;
@@ -760,13 +819,11 @@ static void generate_block(
             fprintf(state->asm_output, "\tadd\tsp, sp, #%" PRIu64 "\n",
                 offset_diff);
         } else {
-            CcmmcTmp *tmp = ccmmc_register_alloc(state->reg_pool, &current_offset);
-            const char *reg_name = ccmmc_register_lock(state->reg_pool, tmp);
+#define REG_TMP "x9"
             fprintf(state->asm_output,
                 "\tldr\t%s, =%" PRIu64 "\n"
-                "\tadd\tsp, sp, %s\n", reg_name, offset_diff, reg_name);
-            ccmmc_register_unlock(state->reg_pool, tmp);
-            ccmmc_register_free(state->reg_pool, tmp, &current_offset);
+                "\tadd\tsp, sp, %s\n", REG_TMP, offset_diff, REG_TMP);
+#undef REG_TMP
         }
     }
 
