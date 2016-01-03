@@ -91,7 +91,8 @@ static inline void load_variable(CcmmcAst *id, CcmmcState *state, const char *r)
     // TODO: array
     if (ccmmc_symbol_attr_is_global(&var_sym->attr)) {
         fprintf(state->asm_output,
-            "\tldr\t%s, %s\n", r, var_name);
+            "\tadr\t" REG_TMP ", %s\n"
+            "\tldr\t%s, [" REG_TMP "]\n", var_name, r);
     } else {
         if (safe_immediate(var_sym->attr.addr)) {
             fprintf(state->asm_output,
@@ -113,7 +114,8 @@ static inline void store_variable(CcmmcAst *id, CcmmcState *state, const char *r
     // TODO: array
     if (ccmmc_symbol_attr_is_global(&var_sym->attr)) {
         fprintf(state->asm_output,
-            "\tstr\t%s, %s\n", r, var_name);
+            "\tadr\t" REG_TMP ", %s\n"
+            "\tstr\t%s, [" REG_TMP "]\n", var_name, r);
     } else {
         if (safe_immediate(var_sym->attr.addr)) {
             fprintf(state->asm_output,
