@@ -1,8 +1,9 @@
-#include <inttypes.h>
-#include <stdio.h>
-
 #ifndef CCMMC_HEADER_REGISTER_H
 #define CCMMC_HEADER_REGISTER_H
+
+#include <inttypes.h>
+#include <stdbool.h>
+#include <stdio.h>
 
 typedef struct CcmmcRegStruct CcmmcReg;
 typedef struct CcmmcTmpStruct {
@@ -12,7 +13,7 @@ typedef struct CcmmcTmpStruct {
 
 typedef struct CcmmcRegStruct {
     CcmmcTmp *tmp;
-    int lock;
+    bool lock;
     const char *name;
 } CcmmcReg;
 

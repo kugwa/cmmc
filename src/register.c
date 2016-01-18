@@ -24,7 +24,7 @@ CcmmcRegPool *ccmmc_register_init(FILE *asm_output)
     for (int i = 0; i < pool->num; i++) {
         pool->list[i] = malloc(sizeof(CcmmcReg));
         pool->list[i]->tmp = NULL;
-        pool->list[i]->lock = 0;
+        pool->list[i]->lock = false;
         pool->list[i]->name = reg_name[i];
     }
     pool->spill = malloc(sizeof(CcmmcTmp*) * SPILL_MAX);
@@ -45,7 +45,7 @@ CcmmcTmp *ccmmc_register_alloc(CcmmcRegPool *pool, uint64_t *offset)
 
         // reg
         tmp->reg->tmp = tmp;
-        tmp->reg->lock = 0;
+        tmp->reg->lock = false;
 
         // pool
         pool->top++;
@@ -76,9 +76,9 @@ const char *ccmmc_register_lock(CcmmcRegPool *pool, CcmmcTmp *tmp)
     const char *reg = NULL;
     if (pool->lock_cnt < pool->lock_max) {
         if (tmp->reg !=NULL) {
-            if (tmp->reg->lock == 0) {
+            if (!tmp->reg->lock) {
                 // reg
-                tmp->reg->lock = 1;
+                tmp->reg->lock = true;
 
                 // pool
                 pool->lock_cnt++;
@@ -88,7 +88,7 @@ const char *ccmmc_register_lock(CcmmcRegPool *pool, CcmmcTmp *tmp)
         else {
             // find a unlocked reg
             int i, j;
-            for (i = 0; i < pool->num && pool->list[i]->lock == 1; i++);
+            for (i = 0; i < pool->num && pool->list[i]->lock; i++);
             assert(i < pool->num); //must found
 
             // gen code to swap the tmp in the register and the tmp on the stack
@@ -119,7 +119,7 @@ const char *ccmmc_register_lock(CcmmcRegPool *pool, CcmmcTmp *tmp)
 
             // register
             tmp->reg->tmp = tmp;
-            tmp->reg->lock = 1;
+            tmp->reg->lock = true;
 
             // pool
             pool->lock_cnt++;
@@ -132,9 +132,9 @@ const char *ccmmc_register_lock(CcmmcRegPool *pool, CcmmcTmp *tmp)
 
 void ccmmc_register_unlock(CcmmcRegPool *pool, CcmmcTmp *tmp)
 {
-    if (tmp->reg != NULL && tmp->reg->lock == 1) {
+    if (tmp->reg != NULL && tmp->reg->lock) {
         // reg
-        tmp->reg->lock = 0;
+        tmp->reg->lock = false;
 
         // pool
         pool->lock_cnt--;
