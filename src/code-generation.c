@@ -830,8 +830,57 @@ static void generate_statement(
                 label_exit);
 #undef FPREG_TMP
             } break;
-        case CCMMC_KIND_STMT_FOR:
-            break;
+        case CCMMC_KIND_STMT_FOR: {
+#define FPREG_TMP  "s16"
+            size_t label_cmp = state->label_number++;
+            size_t label_exit = state->label_number++;
+            const char *result_reg;
+            CcmmcTmp *result = ccmmc_register_alloc(state->reg_pool, &current_offset);
+
+            for (CcmmcAst *assign = stmt->child->child; assign != NULL;
+                    assign = assign->right_sibling) {
+                generate_statement(assign, state, current_offset);
+            }
+
+            // for condition
+            fprintf(state->asm_output, ".LC%zu:\n", label_cmp);
+            for (CcmmcAst *expr = stmt->child->right_sibling->child; expr != NULL;
+                    expr = expr->right_sibling) {
+                generate_expression(expr, state, result, &current_offset);
+            }
+            result_reg = ccmmc_register_lock(state->reg_pool, result);
+            if (stmt->child->type_value == CCMMC_AST_VALUE_FLOAT)
+                fprintf(state->asm_output,
+                    "\tfmov\t%s, %s\n"
+                    "\tfcmp\t%s, #0.0\n"
+                    "\tb.e\t.LC%zu\n",
+                    FPREG_TMP,
+                    result_reg,
+                    FPREG_TMP,
+                    label_exit);
+            else
+                fprintf(state->asm_output,
+                    "\tcbz\t%s, .LC%zu\n",
+                    result_reg,
+                    label_exit);
+            ccmmc_register_unlock(state->reg_pool, result);
+            ccmmc_register_free(state->reg_pool, result, &current_offset);
+
+            // for body
+            generate_statement(
+                stmt->child->right_sibling->right_sibling->right_sibling,
+                state, current_offset);
+            for (CcmmcAst *assign = stmt->child->right_sibling->right_sibling->child;
+                    assign != NULL; assign = assign->right_sibling) {
+                generate_statement(assign, state, current_offset);
+            }
+            fprintf(state->asm_output,
+                "\tb\t.LC%zu\n"
+                ".LC%zu:\n",
+                label_cmp,
+                label_exit);
+#undef FPREG_TMP
+            } break;
         case CCMMC_KIND_STMT_ASSIGN:
             calc_and_save_expression_result(stmt->child,
                 stmt->child->right_sibling, state, &current_offset);
