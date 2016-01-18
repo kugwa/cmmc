@@ -141,7 +141,32 @@ static void load_variable(CcmmcAst *id, CcmmcState *state, CcmmcTmp *dist,
             ccmmc_register_unlock(state->reg_pool, dist);
         }
         else {
-            // TODO: global array
+            CcmmcTmp *offset;
+            const char *offset_reg;
+            char extend[8];
+
+            offset = ccmmc_register_alloc(state->reg_pool, current_offset);
+            calc_array_offset(id, &var_sym->type, state, offset, current_offset);
+
+            dist_reg = ccmmc_register_lock(state->reg_pool, dist);
+            offset_reg = ccmmc_register_lock(state->reg_pool, offset);
+
+            ccmmc_register_extend_name(offset, extend);
+            fprintf(state->asm_output,
+                "\tadrp\t" REG_TMP ", %s\n"
+                "\tadd\t" REG_TMP ", " REG_TMP ", #:lo12:%s\n"
+                "\tsxtw\t%s, %s\n"
+                "\tadd\t" REG_TMP ", " REG_TMP ", %s\n"
+                "\tldr\t%s, [" REG_TMP "]\n",
+                var_name,
+                var_name,
+                extend, offset_reg,
+                extend,
+                dist_reg);
+
+            ccmmc_register_unlock(state->reg_pool, dist);
+            ccmmc_register_unlock(state->reg_pool, offset);
+            ccmmc_register_free(state->reg_pool, offset, current_offset);
         }
     } else {
         if (id->value_id.kind != CCMMC_KIND_ID_ARRAY) {
@@ -206,7 +231,32 @@ static void store_variable(CcmmcAst *id, CcmmcState *state, CcmmcTmp *src,
             ccmmc_register_unlock(state->reg_pool, src);
         }
         else {
-            // TODO: global array
+            CcmmcTmp *offset;
+            const char *offset_reg;
+            char extend[8];
+
+            offset = ccmmc_register_alloc(state->reg_pool, current_offset);
+            calc_array_offset(id, &var_sym->type, state, offset, current_offset);
+
+            src_reg = ccmmc_register_lock(state->reg_pool, src);
+            offset_reg = ccmmc_register_lock(state->reg_pool, offset);
+
+            ccmmc_register_extend_name(offset, extend);
+            fprintf(state->asm_output,
+                "\tadrp\t" REG_TMP ", %s\n"
+                "\tadd\t" REG_TMP ", " REG_TMP ", #:lo12:%s\n"
+                "\tsxtw\t%s, %s\n"
+                "\tadd\t" REG_TMP ", " REG_TMP ", %s\n"
+                "\tstr\t%s, [" REG_TMP "]\n",
+                var_name,
+                var_name,
+                extend, offset_reg,
+                extend,
+                src_reg);
+
+            ccmmc_register_unlock(state->reg_pool, src);
+            ccmmc_register_unlock(state->reg_pool, offset);
+            ccmmc_register_free(state->reg_pool, offset, current_offset);
         }
     } else {
         if (id->value_id.kind != CCMMC_KIND_ID_ARRAY) {
