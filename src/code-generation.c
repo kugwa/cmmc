@@ -88,26 +88,17 @@ static void generate_expression(CcmmcAst *expr, CcmmcState *state,
 static void calc_array_offset(CcmmcAst *ref, CcmmcSymbolType *type,
     CcmmcState *state, CcmmcTmp *result, uint64_t *current_offset)
 {
-    size_t i, dim_mul;
+    size_t i;
     CcmmcAst *index_node;
     CcmmcTmp *index, *mul;
     const char *result_reg, *index_reg, *mul_reg;
 
-    dim_mul = 1;
-    for (i = 0; i < type->array_dimension; i++)
-        dim_mul *= type->array_size[i];
-
-    result_reg = ccmmc_register_lock(state->reg_pool, result);
-    fprintf(state->asm_output, "\tmov\t%s, #0\n", result_reg);
-    ccmmc_register_unlock(state->reg_pool, result);
-
+    generate_expression(ref->child, state, result, current_offset);
     index = ccmmc_register_alloc(state->reg_pool, current_offset);
     mul = ccmmc_register_alloc(state->reg_pool, current_offset);
-    for (i = 0, index_node = ref->child; index_node != NULL;
+    for (i = 1, index_node = ref->child->right_sibling; index_node != NULL;
          i++, index_node = index_node->right_sibling) {
         generate_expression(index_node, state, index, current_offset);
-        dim_mul /= type->array_size[i];
-
         result_reg = ccmmc_register_lock(state->reg_pool, result);
         index_reg = ccmmc_register_lock(state->reg_pool, index);
         mul_reg = ccmmc_register_lock(state->reg_pool, mul);
@@ -115,13 +106,26 @@ static void calc_array_offset(CcmmcAst *ref, CcmmcSymbolType *type,
             "\tldr\t%s, =%zu\n"
             "\tmul\t%s, %s, %s\n"
             "\tadd\t%s, %s, %s\n",
-            mul_reg, dim_mul * 4,
-            index_reg, index_reg, mul_reg,
+            mul_reg, type->array_size[i],
+            result_reg, result_reg, mul_reg,
             result_reg, result_reg, index_reg);
         ccmmc_register_unlock(state->reg_pool, result);
         ccmmc_register_unlock(state->reg_pool, index);
         ccmmc_register_unlock(state->reg_pool, mul);
     }
+
+    result_reg = ccmmc_register_lock(state->reg_pool, result);
+    index_reg = ccmmc_register_lock(state->reg_pool, index);
+    mul_reg = ccmmc_register_lock(state->reg_pool, mul);
+    fprintf(state->asm_output,
+        "\tmov\t%s, #4\n"
+        "\tmul\t%s, %s, %s\n",
+        mul_reg,
+        result_reg, result_reg, mul_reg);
+    ccmmc_register_unlock(state->reg_pool, result);
+    ccmmc_register_unlock(state->reg_pool, index);
+    ccmmc_register_unlock(state->reg_pool, mul);
+
     ccmmc_register_free(state->reg_pool, index, current_offset);
     ccmmc_register_free(state->reg_pool, mul, current_offset);
 }
