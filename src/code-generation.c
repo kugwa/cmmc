@@ -113,21 +113,14 @@ static void calc_array_offset(CcmmcAst *ref, CcmmcSymbolType *type,
         ccmmc_register_unlock(state->reg_pool, index);
         ccmmc_register_unlock(state->reg_pool, mul);
     }
-
-    result_reg = ccmmc_register_lock(state->reg_pool, result);
-    index_reg = ccmmc_register_lock(state->reg_pool, index);
-    mul_reg = ccmmc_register_lock(state->reg_pool, mul);
-    fprintf(state->asm_output,
-        "\tmov\t%s, #4\n"
-        "\tmul\t%s, %s, %s\n",
-        mul_reg,
-        result_reg, result_reg, mul_reg);
-    ccmmc_register_unlock(state->reg_pool, result);
-    ccmmc_register_unlock(state->reg_pool, index);
-    ccmmc_register_unlock(state->reg_pool, mul);
-
     ccmmc_register_free(state->reg_pool, index, current_offset);
     ccmmc_register_free(state->reg_pool, mul, current_offset);
+
+    result_reg = ccmmc_register_lock(state->reg_pool, result);
+    fprintf(state->asm_output,
+        "\tlsl\t%s, %s, #2\n",
+        result_reg, result_reg);
+    ccmmc_register_unlock(state->reg_pool, result);
 }
 
 #define REG_TMP "x9"
