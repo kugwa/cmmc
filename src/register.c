@@ -7,14 +7,15 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define REG_NUM 6
-#define REG_RESERVED "w9"
+#define REG_NUM 5
+#define REG_ADDR "x9"
+#define REG_SWAP "w10"
 #define REG_LOCK_MAX 3
 #define REG_SIZE 4
 #define SPILL_MAX 64
 
 static const char *reg_name[REG_NUM] = {
-    "w10", "w11", "w12", "w13", "w14", "w15"};
+    "w11", "w12", "w13", "w14", "w15"};
 
 CcmmcRegPool *ccmmc_register_init(FILE *asm_output)
 {
@@ -96,12 +97,15 @@ const char *ccmmc_register_lock(CcmmcRegPool *pool, CcmmcTmp *tmp)
                 "\t\t/* ccmmc_register_lock(): swap %s, [fp, #-%" PRIu64 "] */\n",
                 pool->list[i]->name,
                 tmp->addr);
-            fprintf(pool->asm_output, "\t\tmov\t%s, %s\n", REG_RESERVED,
+            fprintf(pool->asm_output, // REG_ADDR holds the address on the stack
+                "\t\tldr\t" REG_ADDR ", =%" PRIu64 "\n"
+                "\t\tsub\t" REG_ADDR ", fp, " REG_ADDR "\n"
+                "\t\tmov\t" REG_SWAP ", %s\n"
+                "\t\tldr\t%s, [" REG_ADDR "]\n"
+                "\t\tstr\t" REG_SWAP ", [" REG_ADDR "]\n",
+                tmp->addr,
+                pool->list[i]->name,
                 pool->list[i]->name);
-            fprintf(pool->asm_output, "\t\tldr\t%s, [fp, #-%" PRIu64 "]\n",
-                pool->list[i]->name, tmp->addr);
-            fprintf(pool->asm_output, "\t\tstr\t%s, [fp, #-%" PRIu64 "]\n",
-                REG_RESERVED, tmp->addr);
 
             // find the index of tmp in pool->spill
             for (j = 0; j < pool->top - pool->num && pool->spill[j] != tmp; j++);
@@ -167,9 +171,14 @@ void ccmmc_register_free(CcmmcRegPool *pool, CcmmcTmp *tmp, uint64_t *offset)
 
             // gen code to move the last tmp to this register
             fprintf(pool->asm_output, "\t\t/* ccmmc_register_free(): */\n");
-            fprintf(pool->asm_output, "\t\tldr\t%s, [fp, #-%" PRIu64 "]\n",
-                tmp->reg->name, pool->spill[pool->top - pool->num]->addr);
-            fprintf(pool->asm_output, "\t\tadd\tsp, sp, #%d\n", REG_SIZE);
+            fprintf(pool->asm_output, // REG_ADDR holds the address on the stack
+                "\t\tldr\t" REG_ADDR ", =%" PRIu64 "\n"
+                "\t\tsub\t" REG_ADDR ", fp, " REG_ADDR "\n"
+                "\t\tldr\t%s, [" REG_ADDR "]\n"
+                "\t\tadd\tsp, sp, #%d\n",
+                pool->spill[pool->top - pool->num]->addr,
+                tmp->reg->name,
+                REG_SIZE);
 
             // offset
             *offset -= REG_SIZE;
