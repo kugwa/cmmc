@@ -991,10 +991,6 @@ static uint64_t generate_local_variable(
         CcmmcSymbol *var_sym = ccmmc_symbol_table_retrieve(state->table,
             var_decl->value_id.name);
         switch (var_decl->value_id.kind) {
-            case CCMMC_KIND_ID_NORMAL:
-                current_offset += 4;
-                var_sym->attr.addr = current_offset;
-                break;
             case CCMMC_KIND_ID_ARRAY: {
                 size_t total_elements = 1;
                 assert(var_sym->type.array_dimension > 0);
@@ -1003,20 +999,27 @@ static uint64_t generate_local_variable(
                 current_offset += total_elements * 4;
                 var_sym->attr.addr = current_offset;
                 } break;
-            case CCMMC_KIND_ID_WITH_INIT: {
+            case CCMMC_KIND_ID_NORMAL:
+            case CCMMC_KIND_ID_WITH_INIT:
                 current_offset += 4;
                 var_sym->attr.addr = current_offset;
-                // FIXME: This only works for single constant initializer.
-                // The value of sp is wrong, so evaluating expressions
-                // can overwrite other variables!
-                calc_and_save_expression_result(var_decl, var_decl->child,
-                    state, &current_offset);
-                } break;
+                break;
             default:
                 assert(false);
         }
     }
     return current_offset;
+}
+
+static void init_local_variable(
+    CcmmcAst *local_decl, CcmmcState *state, uint64_t current_offset)
+{
+    for (CcmmcAst *var_decl = local_decl->child->right_sibling;
+         var_decl != NULL; var_decl = var_decl->right_sibling) {
+        if (var_decl->value_id.kind == CCMMC_KIND_ID_WITH_INIT)
+            calc_and_save_expression_result(var_decl, var_decl->child,
+                state, &current_offset);
+    }
 }
 
 static void generate_block(
@@ -1043,6 +1046,8 @@ static void generate_block(
 #undef REG_TMP
             }
         }
+        for (CcmmcAst *local = child->child; local != NULL; local = local->right_sibling)
+            init_local_variable(local, state, current_offset);
         child = child->right_sibling;
     }
     if (child != NULL && child->type_node == CCMMC_AST_NODE_STMT_LIST) {
