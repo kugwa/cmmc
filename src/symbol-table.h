@@ -25,7 +25,11 @@ typedef struct CcmmcSymbolType_struct {
 } CcmmcSymbolType;
 
 typedef struct CcmmcSymbolAttr_struct {
-    uint64_t addr;
+    bool is_arg;
+    union {
+        uint64_t addr;
+        unsigned int arg_num;
+    };
 } CcmmcSymbolAttr;
 
 typedef struct CcmmcSymbol_struct CcmmcSymbol;
@@ -72,10 +76,10 @@ static inline bool ccmmc_symbol_is_function(CcmmcSymbol *symbol) {
     return ccmmc_symbol_type_is_function(symbol->type);
 }
 static inline bool ccmmc_symbol_attr_is_global(CcmmcSymbolAttr *attr) {
-    return attr->addr == 0;
+    return !attr->is_arg && attr->addr == 0;
 }
 static inline bool ccmmc_symbol_attr_is_local(CcmmcSymbolAttr *attr) {
-    return attr->addr != 0;
+    return !ccmmc_symbol_attr_is_global(attr);
 }
 
 void             ccmmc_symbol_table_open_scope      (CcmmcSymbolTable *table);

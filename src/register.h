@@ -37,9 +37,14 @@ void             ccmmc_register_unlock              (CcmmcRegPool *pool,
 void             ccmmc_register_free                (CcmmcRegPool *pool,
                                                      CcmmcTmp *tmp,
                                                      uint64_t *offset);
-void             ccmmc_register_extend_name         (CcmmcTmp *tmp, char *extend_name);
+void             ccmmc_register_extend_name         (CcmmcTmp *tmp,
+                                                     char *extend_name);
 void             ccmmc_register_caller_save         (CcmmcRegPool *pool);
 void             ccmmc_register_caller_load         (CcmmcRegPool *pool);
+void             ccmmc_register_save_arguments      (CcmmcRegPool *pool,
+                                                     int arg_count);
+void             ccmmc_register_load_arguments      (CcmmcRegPool *pool,
+                                                     int arg_count);
 void             ccmmc_register_fini                (CcmmcRegPool *pool);
 
 #endif

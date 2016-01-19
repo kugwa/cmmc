@@ -218,6 +218,30 @@ void ccmmc_register_caller_load(CcmmcRegPool *pool)
             (i + 1) * REG_SIZE);
 }
 
+void ccmmc_register_save_arguments(CcmmcRegPool *pool, int arg_count)
+{
+    if (arg_count <= 0)
+        return;
+    if (arg_count >= 8)
+        arg_count = 8;
+    for (int i = 0; i < arg_count; i++)
+        fprintf(pool->asm_output, "\tstr\tx%d, [sp, #-%d]\n",
+            i, (i + 1) * 8);
+    fprintf(pool->asm_output, "\tsub\tsp, sp, %d\n", arg_count * 8);
+}
+
+void ccmmc_register_load_arguments(CcmmcRegPool *pool, int arg_count)
+{
+    if (arg_count <= 0)
+        return;
+    if (arg_count >= 8)
+        arg_count = 8;
+    fprintf(pool->asm_output, "\tadd\tsp, sp, %d\n", arg_count * 8);
+    for (int i = 0; i < arg_count; i++)
+        fprintf(pool->asm_output, "\tldr\tx%d, [sp, #-%d]\n",
+            i, (i + 1) * 8);
+}
+
 void ccmmc_register_fini(CcmmcRegPool *pool)
 {
     // TODO: free register pool

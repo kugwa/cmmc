@@ -96,21 +96,27 @@ static void calc_array_offset(CcmmcAst *ref, CcmmcSymbolType *type,
     generate_expression(ref->child, state, result, current_offset);
     index = ccmmc_register_alloc(state->reg_pool, current_offset);
     mul = ccmmc_register_alloc(state->reg_pool, current_offset);
-    for (i = 1, index_node = ref->child->right_sibling; index_node != NULL;
-         i++, index_node = index_node->right_sibling) {
-        generate_expression(index_node, state, index, current_offset);
+    for (i = 1, index_node = ref->child->right_sibling;
+         index_node != NULL || i < type->array_dimension;
+         i++, index_node = index_node == NULL ? NULL : index_node->right_sibling) {
+        if (index_node != NULL) {
+            generate_expression(index_node, state, index, current_offset);
+            index_reg = ccmmc_register_lock(state->reg_pool, index);
+        }
         result_reg = ccmmc_register_lock(state->reg_pool, result);
-        index_reg = ccmmc_register_lock(state->reg_pool, index);
         mul_reg = ccmmc_register_lock(state->reg_pool, mul);
         fprintf(state->asm_output,
             "\tldr\t%s, =%zu\n"
-            "\tmul\t%s, %s, %s\n"
-            "\tadd\t%s, %s, %s\n",
+            "\tmul\t%s, %s, %s\n",
             mul_reg, type->array_size[i],
-            result_reg, result_reg, mul_reg,
-            result_reg, result_reg, index_reg);
+            result_reg, result_reg, mul_reg);
+        if (index_node != NULL) {
+            fprintf(state->asm_output,
+                "\tadd\t%s, %s, %s\n",
+                result_reg, result_reg, index_reg);
+            ccmmc_register_unlock(state->reg_pool, index);
+        }
         ccmmc_register_unlock(state->reg_pool, result);
-        ccmmc_register_unlock(state->reg_pool, index);
         ccmmc_register_unlock(state->reg_pool, mul);
     }
     ccmmc_register_free(state->reg_pool, index, current_offset);
@@ -121,6 +127,10 @@ static void calc_array_offset(CcmmcAst *ref, CcmmcSymbolType *type,
         "\tlsl\t%s, %s, #2\n",
         result_reg, result_reg);
     ccmmc_register_unlock(state->reg_pool, result);
+}
+
+static inline int calc_arg_offset(int arg_num) {
+    return 16 + (arg_num - 8) * 8;
 }
 
 #define REG_TMP "x9"
@@ -171,7 +181,16 @@ static void load_variable(CcmmcAst *id, CcmmcState *state, CcmmcTmp *dist,
     } else {
         if (id->value_id.kind != CCMMC_KIND_ID_ARRAY) {
             dist_reg = ccmmc_register_lock(state->reg_pool, dist);
-            if (safe_immediate(var_sym->attr.addr)) {
+            if (var_sym->attr.is_arg) {
+                if (var_sym->attr.arg_num < 8)
+                    fprintf(state->asm_output,
+                        "\tmov\t%s, w%d\n",
+                        dist_reg, var_sym->attr.arg_num);
+                else
+                    fprintf(state->asm_output,
+                        "\tldr\t%s, [fp, #%d]\n",
+                        dist_reg, calc_arg_offset(var_sym->attr.arg_num));
+            } else if (safe_immediate(var_sym->attr.addr)) {
                 fprintf(state->asm_output,
                     "\tldr\t%s, [fp, #-%" PRIu64 "]\n",
                     dist_reg, var_sym->attr.addr);
@@ -196,14 +215,27 @@ static void load_variable(CcmmcAst *id, CcmmcState *state, CcmmcTmp *dist,
             offset_reg = ccmmc_register_lock(state->reg_pool, offset);
 
             ccmmc_register_extend_name(offset, extend);
+
+            if (var_sym->attr.is_arg) {
+                if (var_sym->attr.arg_num < 8)
+                    fprintf(state->asm_output,
+                        "\tmov\t" REG_TMP ", x%d\n",
+                        var_sym->attr.arg_num);
+                else
+                    fprintf(state->asm_output,
+                        "\tldr\t" REG_TMP ", [fp, #%d]\n",
+                        calc_arg_offset(var_sym->attr.arg_num));
+            } else {
+                fprintf(state->asm_output,
+                    "\tldr\t" REG_TMP ", =%" PRIu64 "\n"
+                    "\tsub\t" REG_TMP ", fp, " REG_TMP "\n"
+                    "\tsxtw\t%s, %s\n",
+                    var_sym->attr.addr,
+                    extend, offset_reg);
+            }
             fprintf(state->asm_output,
-                "\tldr\t" REG_TMP ", =%" PRIu64 "\n"
-                "\tsub\t" REG_TMP ", fp, " REG_TMP "\n"
-                "\tsxtw\t%s, %s\n"
                 "\tadd\t" REG_TMP ", " REG_TMP ", %s\n"
                 "\tldr\t%s, [" REG_TMP "]\n",
-                var_sym->attr.addr,
-                extend, offset_reg,
                 extend,
                 dist_reg);
 
@@ -261,7 +293,16 @@ static void store_variable(CcmmcAst *id, CcmmcState *state, CcmmcTmp *src,
     } else {
         if (id->value_id.kind != CCMMC_KIND_ID_ARRAY) {
             src_reg = ccmmc_register_lock(state->reg_pool, src);
-            if (safe_immediate(var_sym->attr.addr)) {
+            if (var_sym->attr.is_arg) {
+                if (var_sym->attr.arg_num < 8)
+                    fprintf(state->asm_output,
+                        "\tmov\tw%d, %s\n",
+                        var_sym->attr.arg_num, src_reg);
+                else
+                    fprintf(state->asm_output,
+                        "\tstr\t%s, [fp, #%d]\n",
+                        src_reg, calc_arg_offset(var_sym->attr.arg_num));
+            } else if (safe_immediate(var_sym->attr.addr)) {
                 fprintf(state->asm_output,
                     "\tstr\t%s, [fp, #-%" PRIu64 "]\n", src_reg, var_sym->attr.addr);
             } else {
@@ -285,14 +326,27 @@ static void store_variable(CcmmcAst *id, CcmmcState *state, CcmmcTmp *src,
             offset_reg = ccmmc_register_lock(state->reg_pool, offset);
 
             ccmmc_register_extend_name(offset, extend);
+
+            if (var_sym->attr.is_arg) {
+                if (var_sym->attr.arg_num < 8)
+                    fprintf(state->asm_output,
+                        "\tmov\t" REG_TMP ", x%d\n",
+                        var_sym->attr.arg_num);
+                else
+                    fprintf(state->asm_output,
+                        "\tldr\t" REG_TMP ", [fp, #%d]\n",
+                        calc_arg_offset(var_sym->attr.arg_num));
+            } else {
+                fprintf(state->asm_output,
+                    "\tldr\t" REG_TMP ", =%" PRIu64 "\n"
+                    "\tsub\t" REG_TMP ", fp, " REG_TMP "\n"
+                    "\tsxtw\t%s, %s\n",
+                    var_sym->attr.addr,
+                    extend, offset_reg);
+            }
             fprintf(state->asm_output,
-                "\tldr\t" REG_TMP ", =%" PRIu64 "\n"
-                "\tsub\t" REG_TMP ", fp, " REG_TMP "\n"
-                "\tsxtw\t%s, %s\n"
                 "\tadd\t" REG_TMP ", " REG_TMP ", %s\n"
                 "\tstr\t%s, [" REG_TMP "]\n",
-                var_sym->attr.addr,
-                extend, offset_reg,
                 extend,
                 src_reg);
 
@@ -352,15 +406,140 @@ static void call_function(CcmmcAst *id, CcmmcState *state,
     uint64_t *current_offset)
 {
     const char *func_name = id->value_id.name;
-    ccmmc_register_caller_save(state->reg_pool);
+    size_t stored_param_count = 0;
     if (strcmp(func_name, "write") == 0)
         func_name = call_write(id, state, current_offset);
     else if (strcmp(func_name, "read") == 0)
         func_name = "_read_int";
     else if (strcmp(func_name, "fread") == 0)
         func_name = "_read_float";
+    else if (id->right_sibling->child != NULL) {
+        CcmmcSymbol *func_sym = ccmmc_symbol_table_retrieve(
+            state->table, func_name);
+        size_t call_param_count = func_sym->type.param_count;
+
+        // XXX: We should have a better way to find the function in which we are
+        CcmmcAst *in_func = id->parent;
+        for (; in_func->type_node != CCMMC_AST_NODE_DECL ||
+               in_func->value_decl.kind != CCMMC_KIND_DECL_FUNCTION;
+               in_func = in_func->parent);
+        // XXX: We should not search scopes other than the global scope
+        CcmmcSymbol *in_func_sym = ccmmc_symbol_table_retrieve(
+            state->table, in_func->child->right_sibling->value_id.name);
+        stored_param_count = in_func_sym->type.param_count;
+
+        CcmmcAst *arg;
+        CcmmcTmp *dists[call_param_count];
+        size_t i;
+        for (i = 0; i < call_param_count; i++)
+            dists[i] = ccmmc_register_alloc(state->reg_pool, current_offset);
+        for (i = 0, arg = id->right_sibling->child; i < call_param_count;
+             i++, arg = arg->right_sibling)
+            if (!ccmmc_symbol_type_is_array(func_sym->type.param_list[i]))
+                generate_expression(arg, state, dists[i], current_offset);
+        ccmmc_register_save_arguments(state->reg_pool, stored_param_count);
+        ccmmc_register_caller_save(state->reg_pool);
+        for (i = 0, arg = id->right_sibling->child; i < call_param_count;
+             i++, arg = arg->right_sibling) {
+            if (ccmmc_symbol_type_is_array(func_sym->type.param_list[i])) {
+                assert(arg->type_node == CCMMC_AST_NODE_ID);
+
+                CcmmcTmp *offset = ccmmc_register_alloc(
+                    state->reg_pool, current_offset);
+                CcmmcSymbol *var_sym = ccmmc_symbol_table_retrieve(
+                    state->table, arg->value_id.name);
+                if (arg->child != NULL)
+                    calc_array_offset(arg, &var_sym->type, state,
+                        offset, current_offset);
+
+                const char *offset_reg = ccmmc_register_lock(
+                    state->reg_pool, offset);
+                char offset_extend[8];
+                ccmmc_register_extend_name(offset, offset_extend);
+
+#define REG_TMP "x9"
+                if (var_sym->attr.is_arg) {
+                    if (var_sym->attr.arg_num < 8)
+                        fprintf(state->asm_output,
+                            "\tmov\t" REG_TMP ", x%d\n",
+                            var_sym->attr.arg_num);
+                    else
+                        fprintf(state->asm_output,
+                            "\tldr\t" REG_TMP ", [fp, #%d]\n",
+                            calc_arg_offset(var_sym->attr.arg_num));
+                } else {
+                    fprintf(state->asm_output,
+                        "\tldr\t" REG_TMP ", =%" PRIu64 "\n"
+                        "\tsub\t" REG_TMP ", fp, " REG_TMP "\n"
+                        "\tsxtw\t%s, %s\n",
+                        var_sym->attr.addr,
+                        offset_extend, offset_reg);
+                }
+                if (arg->child != NULL)
+                    fprintf(state->asm_output,
+                        "\tadd\t" REG_TMP ", " REG_TMP ", %s\n",
+                        offset_extend);
+                if (i < 8)
+                    fprintf(state->asm_output,
+                        "\tmov\tx%zu, " REG_TMP "\n", i);
+                else
+                    fprintf(state->asm_output,
+                        "\tstr\t" REG_TMP ", [sp, -8]!\n");
+#undef REG_TMP
+                ccmmc_register_unlock(state->reg_pool, offset);
+                ccmmc_register_free(state->reg_pool, offset, current_offset);
+            } else {
+                CcmmcAstValueType arg_type = arg->type_value;
+                CcmmcAstValueType expected_type =
+                    func_sym->type.param_list[i].type_base;
+                const char *dist_reg = ccmmc_register_lock(
+                    state->reg_pool, dists[i]);
+                char dist_extend[8];
+                ccmmc_register_extend_name(dists[i], dist_extend);
+#define FPREG_TMP "s16"
+                if (arg_type == CCMMC_AST_VALUE_FLOAT &&
+                    expected_type == CCMMC_AST_VALUE_INT)
+                    fprintf(state->asm_output,
+                        "\tfmov\t%s, %s\n"
+                        "\tfcvtas\t%s, %s\n",
+                        FPREG_TMP, dist_reg,
+                        dist_reg, FPREG_TMP);
+                else if (arg_type == CCMMC_AST_VALUE_INT &&
+                    expected_type == CCMMC_AST_VALUE_FLOAT)
+                    fprintf(state->asm_output,
+                        "\tscvtf\t%s, %s\n"
+                        "\tfmov\t%s, %s\n",
+                        FPREG_TMP, dist_reg,
+                        dist_reg, FPREG_TMP);
+#undef FPREG_TMP
+                if (i < 8)
+                    fprintf(state->asm_output,
+                        "\tsxtw\tx%zu, %s\n",
+                        i, dist_reg);
+                else
+                    fprintf(state->asm_output,
+                        "\tsxtw\t%s, %s\n"
+                        "\tstr\t%s, [sp, -8]!\n",
+                        dist_reg, dist_reg,
+                        dist_reg);
+                ccmmc_register_unlock(state->reg_pool, dists[i]);
+            }
+        }
+        fprintf(state->asm_output, "\tbl\t%s\n", func_name);
+        if (call_param_count > 8)
+            fprintf(state->asm_output,
+                "\tadd\tsp, sp, %zu\n",
+                call_param_count * 8);
+        ccmmc_register_caller_load(state->reg_pool);
+        ccmmc_register_load_arguments(state->reg_pool, stored_param_count);
+        for (i = 0; i < call_param_count; i++)
+            ccmmc_register_free(state->reg_pool, dists[i], current_offset);
+        return;
+    }
+    ccmmc_register_caller_save(state->reg_pool);
     fprintf(state->asm_output, "\tbl\t%s\n", func_name);
     ccmmc_register_caller_load(state->reg_pool);
+    ccmmc_register_load_arguments(state->reg_pool, stored_param_count);
 }
 
 static void generate_expression(CcmmcAst *expr, CcmmcState *state,
@@ -778,15 +957,15 @@ static void calc_and_save_expression_result(CcmmcAst *lvar, CcmmcAst *expr,
     ccmmc_register_free(state->reg_pool, result, current_offset);
 }
 
-static void generate_block(
-    CcmmcAst *block, CcmmcState *state, uint64_t current_offset);
+static void generate_block(CcmmcAst *block, CcmmcState *state,
+    uint64_t current_offset, bool scope_already_open);
 static void generate_statement(
     CcmmcAst *stmt, CcmmcState *state, uint64_t current_offset)
 {
     if (stmt->type_node == CCMMC_AST_NODE_NUL)
         return;
     if (stmt->type_node == CCMMC_AST_NODE_BLOCK) {
-        generate_block(stmt, state, current_offset);
+        generate_block(stmt, state, current_offset, false);
         return;
     }
 
@@ -1022,10 +1201,11 @@ static void init_local_variable(
     }
 }
 
-static void generate_block(
-    CcmmcAst *block, CcmmcState *state, uint64_t current_offset)
+static void generate_block(CcmmcAst *block, CcmmcState *state,
+    uint64_t current_offset, bool scope_already_open)
 {
-    ccmmc_symbol_table_reopen_scope(state->table);
+    if (!scope_already_open)
+        ccmmc_symbol_table_reopen_scope(state->table);
 
     CcmmcAst *child = block->child;
     uint64_t orig_offset = current_offset;
@@ -1088,8 +1268,16 @@ static void generate_function(CcmmcAst *function, CcmmcState *state)
         symbol_name,
         symbol_name);
     CcmmcAst *param_node = function->child->right_sibling->right_sibling;
+    ccmmc_symbol_table_reopen_scope(state->table);
+    CcmmcAst *arg_node = param_node->child;
+    for (int i = 0; arg_node != NULL; arg_node = arg_node->right_sibling, i++) {
+        CcmmcSymbol *arg_sym = ccmmc_symbol_table_retrieve(state->table,
+            arg_node->child->right_sibling->value_id.name);
+        arg_sym->attr.is_arg = true;
+        arg_sym->attr.arg_num = i;
+    }
     CcmmcAst *block_node = param_node->right_sibling;
-    generate_block(block_node, state, 0);
+    generate_block(block_node, state, 0, true);
     fprintf(state->asm_output,
         ".LR_%s:\n"
         "\tldp\tlr, fp, [sp], 16\n"

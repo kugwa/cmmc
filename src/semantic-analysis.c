@@ -451,6 +451,9 @@ static bool check_call(CcmmcAst *call, CcmmcSymbolTable *table)
                 any_error = true;
                 continue;
             }
+            // Get the type of the scalar variable for later use
+            if (func->type.param_list[i].array_dimension == 0)
+                any_error = check_relop_expr(param, table) || any_error;
         }
         else {
             any_error = check_relop_expr(param, table) || any_error;
