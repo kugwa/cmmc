@@ -222,3 +222,5 @@ void ccmmc_register_fini(CcmmcRegPool *pool)
 {
     // TODO: free register pool
 }
+
+// vim: set sw=4 ts=4 sts=4 et:
