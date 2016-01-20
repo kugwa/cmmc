@@ -405,28 +405,33 @@ static const char *call_write(CcmmcAst *id, CcmmcState *state,
 static void call_function(CcmmcAst *id, CcmmcState *state,
     uint64_t *current_offset)
 {
+    // XXX: We should have a better way to find the function in which we are
+    CcmmcAst *in_func = id->parent;
+    for (; in_func->type_node != CCMMC_AST_NODE_DECL ||
+           in_func->value_decl.kind != CCMMC_KIND_DECL_FUNCTION;
+           in_func = in_func->parent);
+    // XXX: We should not search scopes other than the global scope
+    CcmmcSymbol *in_func_sym = ccmmc_symbol_table_retrieve(
+        state->table, in_func->child->right_sibling->value_id.name);
+    size_t stored_param_count = in_func_sym->type.param_count;
+
     const char *func_name = id->value_id.name;
-    size_t stored_param_count = 0;
-    if (strcmp(func_name, "write") == 0)
+    if (strcmp(func_name, "write") == 0) {
+        ccmmc_register_save_arguments(state->reg_pool, stored_param_count);
+        ccmmc_register_caller_save(state->reg_pool);
         func_name = call_write(id, state, current_offset);
-    else if (strcmp(func_name, "read") == 0)
+    } else if (strcmp(func_name, "read") == 0) {
+        ccmmc_register_save_arguments(state->reg_pool, stored_param_count);
+        ccmmc_register_caller_save(state->reg_pool);
         func_name = "_read_int";
-    else if (strcmp(func_name, "fread") == 0)
+    } else if (strcmp(func_name, "fread") == 0) {
+        ccmmc_register_save_arguments(state->reg_pool, stored_param_count);
+        ccmmc_register_caller_save(state->reg_pool);
         func_name = "_read_float";
-    else if (id->right_sibling->child != NULL) {
+    } else if (id->right_sibling->child != NULL) {
         CcmmcSymbol *func_sym = ccmmc_symbol_table_retrieve(
             state->table, func_name);
         size_t call_param_count = func_sym->type.param_count;
-
-        // XXX: We should have a better way to find the function in which we are
-        CcmmcAst *in_func = id->parent;
-        for (; in_func->type_node != CCMMC_AST_NODE_DECL ||
-               in_func->value_decl.kind != CCMMC_KIND_DECL_FUNCTION;
-               in_func = in_func->parent);
-        // XXX: We should not search scopes other than the global scope
-        CcmmcSymbol *in_func_sym = ccmmc_symbol_table_retrieve(
-            state->table, in_func->child->right_sibling->value_id.name);
-        stored_param_count = in_func_sym->type.param_count;
 
         CcmmcAst *arg;
         CcmmcTmp *dists[call_param_count];
@@ -536,7 +541,6 @@ static void call_function(CcmmcAst *id, CcmmcState *state,
             ccmmc_register_free(state->reg_pool, dists[i], current_offset);
         return;
     }
-    ccmmc_register_caller_save(state->reg_pool);
     fprintf(state->asm_output, "\tbl\t%s\n", func_name);
     ccmmc_register_caller_load(state->reg_pool);
     ccmmc_register_load_arguments(state->reg_pool, stored_param_count);
