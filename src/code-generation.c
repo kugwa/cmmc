@@ -359,13 +359,15 @@ static void store_variable(CcmmcAst *id, CcmmcState *state, CcmmcTmp *src,
 #undef REG_TMP
 
 static const char *call_write(CcmmcAst *id, CcmmcState *state,
-    uint64_t *current_offset)
+    size_t stored_param_count, uint64_t *current_offset)
 {
     CcmmcAst *arg = id->right_sibling->child;
     CcmmcTmp *dist;
     const char *dist_reg;
 
     if (arg->type_value == CCMMC_AST_VALUE_CONST_STRING) {
+        ccmmc_register_save_arguments(state->reg_pool, stored_param_count);
+        ccmmc_register_caller_save(state->reg_pool);
         size_t label_str = state->label_number++;
         fprintf(state->asm_output,
             "\t.section .rodata\n"
@@ -381,6 +383,8 @@ static const char *call_write(CcmmcAst *id, CcmmcState *state,
     } else if (arg->type_value == CCMMC_AST_VALUE_INT) {
         dist = ccmmc_register_alloc(state->reg_pool, current_offset);
         generate_expression(arg, state, dist, current_offset);
+        ccmmc_register_save_arguments(state->reg_pool, stored_param_count);
+        ccmmc_register_caller_save(state->reg_pool);
         dist_reg = ccmmc_register_lock(state->reg_pool, dist);
         fprintf(state->asm_output,
             "\tmov\tw0, %s\n",
@@ -391,6 +395,8 @@ static const char *call_write(CcmmcAst *id, CcmmcState *state,
     } else if (arg->type_value == CCMMC_AST_VALUE_FLOAT) {
         dist = ccmmc_register_alloc(state->reg_pool, current_offset);
         generate_expression(arg, state, dist, current_offset);
+        ccmmc_register_save_arguments(state->reg_pool, stored_param_count);
+        ccmmc_register_caller_save(state->reg_pool);
         dist_reg = ccmmc_register_lock(state->reg_pool, dist);
         fprintf(state->asm_output,
             "\tfmov\ts0, %s\n",
@@ -417,9 +423,7 @@ static void call_function(CcmmcAst *id, CcmmcState *state,
 
     const char *func_name = id->value_id.name;
     if (strcmp(func_name, "write") == 0) {
-        ccmmc_register_save_arguments(state->reg_pool, stored_param_count);
-        ccmmc_register_caller_save(state->reg_pool);
-        func_name = call_write(id, state, current_offset);
+        func_name = call_write(id, state, stored_param_count, current_offset);
     } else if (strcmp(func_name, "read") == 0) {
         ccmmc_register_save_arguments(state->reg_pool, stored_param_count);
         ccmmc_register_caller_save(state->reg_pool);
