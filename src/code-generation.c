@@ -444,6 +444,10 @@ static void call_function(CcmmcAst *id, CcmmcState *state,
                 generate_expression(arg, state, dists[i], current_offset);
         ccmmc_register_save_arguments(state->reg_pool, stored_param_count);
         ccmmc_register_caller_save(state->reg_pool);
+        if (call_param_count > 8)
+            fprintf(state->asm_output,
+                "\tsub\tsp, sp, %zu\n",
+                (call_param_count - 8) * 8);
         for (i = 0, arg = id->right_sibling->child; i < call_param_count;
              i++, arg = arg->right_sibling) {
             if (ccmmc_symbol_type_is_array(func_sym->type.param_list[i])) {
@@ -489,7 +493,8 @@ static void call_function(CcmmcAst *id, CcmmcState *state,
                         "\tmov\tx%zu, " REG_TMP "\n", i);
                 else
                     fprintf(state->asm_output,
-                        "\tstr\t" REG_TMP ", [sp, -8]!\n");
+                        "\tstr\t" REG_TMP ", [sp, %zu]\n",
+                        (i - 8) * 8);
 #undef REG_TMP
                 ccmmc_register_unlock(state->reg_pool, offset);
                 ccmmc_register_free(state->reg_pool, offset, current_offset);
@@ -524,9 +529,9 @@ static void call_function(CcmmcAst *id, CcmmcState *state,
                 else
                     fprintf(state->asm_output,
                         "\tsxtw\t%s, %s\n"
-                        "\tstr\t%s, [sp, -8]!\n",
+                        "\tstr\t%s, [sp, %zu]\n",
                         dist_extend, dist_reg,
-                        dist_reg);
+                        dist_extend, (i - 8) * 8);
                 ccmmc_register_unlock(state->reg_pool, dists[i]);
             }
         }
