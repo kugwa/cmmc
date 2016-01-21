@@ -380,7 +380,7 @@ static const char *call_write(CcmmcAst *id, CcmmcState *state,
         return "_write_str";
     } else if (arg->type_value == CCMMC_AST_VALUE_INT) {
         dist = ccmmc_register_alloc(state->reg_pool, current_offset);
-        load_variable(arg, state, dist, current_offset);
+        generate_expression(arg, state, dist, current_offset);
         dist_reg = ccmmc_register_lock(state->reg_pool, dist);
         fprintf(state->asm_output,
             "\tmov\tw0, %s\n",
@@ -390,7 +390,7 @@ static const char *call_write(CcmmcAst *id, CcmmcState *state,
         return "_write_int";
     } else if (arg->type_value == CCMMC_AST_VALUE_FLOAT) {
         dist = ccmmc_register_alloc(state->reg_pool, current_offset);
-        load_variable(arg, state, dist, current_offset);
+        generate_expression(arg, state, dist, current_offset);
         dist_reg = ccmmc_register_lock(state->reg_pool, dist);
         fprintf(state->asm_output,
             "\tfmov\ts0, %s\n",
