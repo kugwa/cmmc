@@ -270,9 +270,13 @@ void ccmmc_register_caller_save(CcmmcRegPool *pool)
         fprintf(pool->asm_output, "\tstr\t%s, [sp, #-%d]\n",
             pool->list[i]->name,
             (i + 1) * REG_SIZE);
-    fprintf(pool->asm_output, "\tsub\tsp, sp, %d\n", bound * REG_SIZE);
+    if (bound > 0)
+        fprintf(pool->asm_output, "\tsub\tsp, sp, %d\n", bound * REG_SIZE);
 
-    sprintf(pool->print_buf, "\tadd\tsp, sp, %d\n", bound * REG_SIZE);
+    if (bound > 0)
+        sprintf(pool->print_buf, "\tadd\tsp, sp, %d\n", bound * REG_SIZE);
+    else
+        pool->print_buf[0] = '\0';
     for (int i = 0; i < bound; i++) {
         sprintf(buf, "\tldr\t%s, [sp, #-%d]\n",
             pool->list[i]->name,
