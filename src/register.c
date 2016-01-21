@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define REG_NUM 5
+#define REG_NUM 16
 #define REG_ADDR "x9"
 #define REG_SWAP "w10"
 #define REG_LOCK_MAX 3
@@ -15,7 +15,7 @@
 #define SPILL_MAX 64
 
 static const char *reg_name[REG_NUM] = {
-    "w11", "w12", "w13", "w14", "w15"};
+    "w11", "w12", "w13", "w14", "w15", "w19", "w20", "w21", "w22", "w23", "w24", "w25", "w26", "w27", "w28", "w29"};
 
 CcmmcRegPool *ccmmc_register_init(FILE *asm_output)
 {
