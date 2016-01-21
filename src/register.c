@@ -11,16 +11,13 @@
 // #define REG_NUM 5
 #define REG_ADDR "x9"
 #define REG_SWAP "w10"
+#define SPILL_MAX 32
 #define REG_LOCK_MAX 3
 #define REG_SIZE 4
 
 static const char *reg_name[REG_NUM] = {
     "w11", "w12", "w13", "w14", "w15", "w19", "w20", "w21", "w22", "w23", "w24", "w25", "w26", "w27", "w28"};
     // "w11", "w12", "w13", "w14", "w15"};
-
-int spill_max = 32;
-
-char print_buf[(REG_NUM + 1) * 25];
 
 CcmmcRegPool *ccmmc_register_init(FILE *asm_output)
 {
@@ -33,10 +30,12 @@ CcmmcRegPool *ccmmc_register_init(FILE *asm_output)
         pool->list[i]->lock = false;
         pool->list[i]->name = reg_name[i];
     }
-    pool->spill = malloc(sizeof(CcmmcTmp*) * spill_max);
+    pool->spill_max = SPILL_MAX;
+    pool->spill = malloc(sizeof(CcmmcTmp*) * pool->spill_max);
     pool->top = 0;
     pool->lock_max = REG_LOCK_MAX;
     pool->lock_cnt = 0;
+    pool->print_buf = malloc(sizeof(char) * ((REG_NUM + 1) * 25));
     pool->asm_output = asm_output;
     return pool;
 }
@@ -69,9 +68,9 @@ CcmmcTmp *ccmmc_register_alloc(CcmmcRegPool *pool, uint64_t *offset)
         tmp->reg = NULL;
 
         // spill
-        if (pool->top - pool->num >= spill_max) {
-            spill_max *= 2;
-            pool->spill = realloc(pool->spill, sizeof(CcmmcTmp*) * spill_max);
+        if (pool->top - pool->num >= pool->spill_max) {
+            pool->spill_max *= 2;
+            pool->spill = realloc(pool->spill, sizeof(CcmmcTmp*) * pool->spill_max);
         }
         pool->spill[pool->top - pool->num] = tmp;
 
@@ -273,18 +272,18 @@ void ccmmc_register_caller_save(CcmmcRegPool *pool)
             (i + 1) * REG_SIZE);
     fprintf(pool->asm_output, "\tsub\tsp, sp, %d\n", bound * REG_SIZE);
 
-    sprintf(print_buf, "\tadd\tsp, sp, %d\n", bound * REG_SIZE);
+    sprintf(pool->print_buf, "\tadd\tsp, sp, %d\n", bound * REG_SIZE);
     for (int i = 0; i < bound; i++) {
         sprintf(buf, "\tldr\t%s, [sp, #-%d]\n",
             pool->list[i]->name,
             (i + 1) * REG_SIZE);
-        strcat(print_buf, buf);
+        strcat(pool->print_buf, buf);
     }
 }
 
 void ccmmc_register_caller_load(CcmmcRegPool *pool)
 {
-    fputs(print_buf, pool->asm_output);
+    fputs(pool->print_buf, pool->asm_output);
 }
 
 void ccmmc_register_save_arguments(CcmmcRegPool *pool, int arg_count)

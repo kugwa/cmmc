@@ -22,8 +22,10 @@ typedef struct CcmmcRegPoolStruct {
     int num;
     int top;
     CcmmcTmp **spill;
+    int spill_max;
     int lock_max;
     int lock_cnt;
+    char *print_buf;
     FILE *asm_output;
 } CcmmcRegPool;
 
