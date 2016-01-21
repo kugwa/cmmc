@@ -149,8 +149,7 @@ void ccmmc_register_free(CcmmcRegPool *pool, CcmmcTmp *tmp, uint64_t *offset)
 {
     // find the index of register associated with tmp
     int i;
-    for (i = 0; i < pool->num && pool->list[i] != tmp->reg; i++);
-
+    for (i = 0; i < pool->num && pool->list[i]->tmp != tmp; i++);
     if (pool->top <= pool->num) {
         // tmp
         free(tmp);
@@ -164,38 +163,81 @@ void ccmmc_register_free(CcmmcRegPool *pool, CcmmcTmp *tmp, uint64_t *offset)
             pool->list[pool->top] = swap;
         }
     }
-    else {
-        if (i < pool->num) {
-            // pool
-            pool->top--;
+    else if (i < pool->num) {
+        // pool
+        pool->top--;
 
-            // gen code to move the last tmp to this register
-            fprintf(pool->asm_output, "\t\t/* ccmmc_register_free(): */\n");
-            fprintf(pool->asm_output, // REG_ADDR holds the address on the stack
+        // gen code to move the last tmp to this register
+        fprintf(pool->asm_output,
+            "\t\t/* ccmmc_register_free(): mov %s, [fp, #-%" PRIu64 "] */\n",
+            tmp->reg->name, pool->spill[pool->top - pool->num]->addr);
+        fprintf(pool->asm_output, // REG_ADDR holds the address on the stack
+            "\t\tldr\t" REG_ADDR ", =%" PRIu64 "\n"
+            "\t\tsub\t" REG_ADDR ", fp, " REG_ADDR "\n"
+            "\t\tldr\t%s, [" REG_ADDR "]\n"
+            "\t\tadd\tsp, sp, #%d\n",
+            pool->spill[pool->top - pool->num]->addr,
+            tmp->reg->name,
+            REG_SIZE);
+
+        // offset
+        *offset -= REG_SIZE;
+
+        // reg
+        tmp->reg->tmp = pool->spill[pool->top - pool->num];
+
+        // the last tmp
+        tmp->reg->tmp->reg = tmp->reg;
+        tmp->reg->tmp->addr = 0;
+
+        // tmp
+        free(tmp);
+    }
+    else {
+        for (i = 0; i < pool->top - pool->num && pool->spill[i] != tmp; i++);
+        assert(i < pool->top - pool->num); //must found
+        
+        // pool
+        pool->top--;
+
+        if (i < pool->top - pool->num) {
+            // gen code to move the last tmp to the hole
+            fprintf(pool->asm_output,
+                "\t\t/* ccmmc_register_free(): "
+                "mov [fp, #-%" PRIu64 "] , [fp, #-%" PRIu64 "] */\n",
+                pool->spill[i]->addr,
+                pool->spill[pool->top - pool->num]->addr);
+            fprintf(pool->asm_output,
                 "\t\tldr\t" REG_ADDR ", =%" PRIu64 "\n"
                 "\t\tsub\t" REG_ADDR ", fp, " REG_ADDR "\n"
-                "\t\tldr\t%s, [" REG_ADDR "]\n"
+                "\t\tldr\t" REG_SWAP ", [" REG_ADDR "]\n"
+                "\t\tldr\t" REG_ADDR ", =%" PRIu64 "\n"
+                "\t\tsub\t" REG_ADDR ", fp, " REG_ADDR "\n"
+                "\t\tstr\t" REG_SWAP ", [" REG_ADDR "]\n"
                 "\t\tadd\tsp, sp, #%d\n",
                 pool->spill[pool->top - pool->num]->addr,
-                tmp->reg->name,
+                pool->spill[i]->addr,
                 REG_SIZE);
 
             // offset
             *offset -= REG_SIZE;
 
-            // reg
-            tmp->reg->tmp = pool->spill[pool->top - pool->num];
-
-            // the last tmp
-            tmp->reg->tmp->reg = tmp->reg;
-            tmp->reg->tmp->addr = 0;
-
-            // tmp
-            free(tmp);
+            // spill
+            pool->spill[pool->top - pool->num]->addr = pool->spill[i]->addr;
+            free(pool->spill[i]);
+            pool->spill[i] = pool->spill[pool->top - pool->num];
         }
         else {
-            // tmp is on the stack, not handled
-            assert(false);
+            // gen code to remove the last tmp
+            fprintf(pool->asm_output,
+                "\t\t/* ccmmc_register_free(): */\n"
+                "\t\tadd\tsp, sp, #%d\n", REG_SIZE);
+
+            // offset
+            *offset -= REG_SIZE;
+
+            // spill
+            free(pool->spill[i]);
         }
     }
 }
