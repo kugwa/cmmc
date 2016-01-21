@@ -9,7 +9,7 @@
 #include "common.h"
 #include "state.h"
 
-#include "libparser_a-parser.h"
+#include "parser.h"
 
 #include <assert.h>
 #include <limits.h>

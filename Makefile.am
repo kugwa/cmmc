@@ -22,6 +22,7 @@ bin_PROGRAMS = parser
 noinst_LIBRARIES = libparser.a
 
 AM_CPPFLAGS = -I$(top_srcdir)/src -I$(top_builddir)/src
+AM_YFLAGS = -d
 
 parser_CFLAGS = $(WARN_CFLAGS)
 parser_SOURCES =		\
@@ -46,15 +47,14 @@ parser_LDADD =			\
 	libparser.a		\
 	$(NULL)
 
-libparser_a_YFLAGS = -d
 libparser_a_SOURCES =		\
 	src/lexer.l		\
 	src/parser.y		\
 	$(NULL)
 
-BUILT_SOURCES =				\
-	src/lexer.c			\
-	src/libparser_a-parser.h	\
+BUILT_SOURCES =			\
+	src/lexer.c		\
+	src/parser.h		\
 	$(NULL)
 
 submit_dir_name = hw
@@ -64,8 +64,8 @@ submit: dist
 	mv $(distdir) $(submit_dir_name)
 	cp -a $(submit_dir_name)/Makefile.simple $(submit_dir_name)/Makefile
 	rm $(submit_dir_name)/src/lexer.c
-	rm $(submit_dir_name)/src/libparser_a-parser.h
-	rm $(submit_dir_name)/src/libparser_a-parser.c
+	rm $(submit_dir_name)/src/parser.h
+	rm $(submit_dir_name)/src/parser.c
 	ver=`git rev-list HEAD | wc -l` && tar -jpcf \
 	    $(submit_tarball_prefix)_ver$$ver.tar.bz2 $(submit_dir_name)
 	rm -rf $(submit_dir_name)

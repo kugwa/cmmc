@@ -11,7 +11,7 @@ typedef void* yyscan_t;
 #include "semantic-analysis.h"
 #include "state.h"
 
-#include "libparser_a-parser.h"
+#include "parser.h"
 
 #include <errno.h>
 #include <locale.h>
