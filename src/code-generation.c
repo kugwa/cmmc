@@ -534,7 +534,7 @@ static void call_function(CcmmcAst *id, CcmmcState *state,
         if (call_param_count > 8)
             fprintf(state->asm_output,
                 "\tadd\tsp, sp, %zu\n",
-                call_param_count * 8);
+                (call_param_count - 8) * 8);
         ccmmc_register_caller_load(state->reg_pool);
         ccmmc_register_load_arguments(state->reg_pool, stored_param_count);
         for (i = 0; i < call_param_count; i++)
