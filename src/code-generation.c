@@ -525,7 +525,7 @@ static void call_function(CcmmcAst *id, CcmmcState *state,
                     fprintf(state->asm_output,
                         "\tsxtw\t%s, %s\n"
                         "\tstr\t%s, [sp, -8]!\n",
-                        dist_reg, dist_reg,
+                        dist_extend, dist_reg,
                         dist_reg);
                 ccmmc_register_unlock(state->reg_pool, dists[i]);
             }
