@@ -14,6 +14,7 @@
 #define REG_SIZE 4
 #define SPILL_MAX 64
 
+char print_buf[(REG_NUM + 1) * 25];
 static const char *reg_name[REG_NUM] = {
     "w11", "w12", "w13", "w14", "w15", "w19", "w20", "w21", "w22", "w23", "w24", "w25", "w26", "w27", "w28", "w29"};
 
@@ -253,20 +254,29 @@ void ccmmc_register_extend_name(CcmmcTmp *tmp, char *extend_name)
 
 void ccmmc_register_caller_save(CcmmcRegPool *pool)
 {
-    for (int i = 0; i < REG_NUM; i++)
+    char buf[25];
+    int bound = pool->num;
+    if (pool->top < bound)
+        bound = pool->top;
+
+    for (int i = 0; i < bound; i++)
         fprintf(pool->asm_output, "\tstr\t%s, [sp, #-%d]\n",
-            reg_name[i],
+            pool->list[i]->name,
             (i + 1) * REG_SIZE);
-    fprintf(pool->asm_output, "\tsub\tsp, sp, %d\n", REG_NUM * REG_SIZE);
+    fprintf(pool->asm_output, "\tsub\tsp, sp, %d\n", bound * REG_SIZE);
+
+    sprintf(print_buf, "\tadd\tsp, sp, %d\n", bound * REG_SIZE);
+    for (int i = 0; i < bound; i++) {
+        sprintf(buf, "\tldr\t%s, [sp, #-%d]\n",
+            pool->list[i]->name,
+            (i + 1) * REG_SIZE);
+        strcat(print_buf, buf);
+    }
 }
 
 void ccmmc_register_caller_load(CcmmcRegPool *pool)
 {
-    fprintf(pool->asm_output, "\tadd\tsp, sp, %d\n", REG_NUM * REG_SIZE);
-    for (int i = 0; i < REG_NUM; i++)
-        fprintf(pool->asm_output, "\tldr\t%s, [sp, #-%d]\n",
-            reg_name[i],
-            (i + 1) * REG_SIZE);
+    fputs(print_buf, pool->asm_output);
 }
 
 void ccmmc_register_save_arguments(CcmmcRegPool *pool, int arg_count)
