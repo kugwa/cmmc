@@ -545,6 +545,9 @@ static void call_function(CcmmcAst *id, CcmmcState *state,
         for (i = 0; i < call_param_count; i++)
             ccmmc_register_free(state->reg_pool, dists[i], current_offset);
         return;
+    } else {
+        ccmmc_register_save_arguments(state->reg_pool, stored_param_count);
+        ccmmc_register_caller_save(state->reg_pool);
     }
     fprintf(state->asm_output, "\tbl\t%s\n", func_name);
     ccmmc_register_caller_load(state->reg_pool);
