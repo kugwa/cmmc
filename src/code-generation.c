@@ -1265,7 +1265,7 @@ static void generate_function(CcmmcAst *function, CcmmcState *state)
     const char *func_name = function->child->right_sibling->value_id.name;
     const char *symbol_name = func_name;
     // XXX: We have to rewrite some names to workaround TA's broken toolchain
-    if (strcmp(func_name, "main") == 0 || strcmp(func_name, "MAIN") == 0)
+    if (strcmp(func_name, "MAIN") == 0)
         symbol_name = "_start_MAIN";
     fprintf(state->asm_output,
         "\t.type\t%s, %%function\n"
