@@ -66,6 +66,6 @@ submit: dist
 	rm $(submit_dir_name)/src/lexer.c
 	rm $(submit_dir_name)/src/parser.h
 	rm $(submit_dir_name)/src/parser.c
-	ver=`git rev-list HEAD | wc -l` && tar -jpcf \
+	ver=`echo $$(git rev-list HEAD | wc -l)` && tar -jpcf \
 	    $(submit_tarball_prefix)_ver$$ver.tar.bz2 $(submit_dir_name)
 	rm -rf $(submit_dir_name)
