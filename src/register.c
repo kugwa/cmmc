@@ -261,7 +261,7 @@ void ccmmc_register_extend_name(CcmmcTmp *tmp, char *extend_name)
 
 void ccmmc_register_caller_save(CcmmcRegPool *pool)
 {
-    char buf[25];
+    char buf[30];
     int bound = pool->num;
     if (pool->top < bound)
         bound = pool->top;

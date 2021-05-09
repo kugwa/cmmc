@@ -665,7 +665,7 @@ static bool decl_variable(
     // Other children are newly declared variables
     for (CcmmcAst *init_id = var_decl->child->right_sibling; init_id != NULL;
          init_id = init_id->right_sibling) {
-        assert(init_id->type_node = CCMMC_AST_NODE_ID);
+        assert(init_id->type_node == CCMMC_AST_NODE_ID);
         const char *var_str = init_id->value_id.name;
         if (ccmmc_symbol_scope_exist(table->current, var_str)) {
             any_error = true;
